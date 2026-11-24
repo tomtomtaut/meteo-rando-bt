@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from meteo import arome, ecmwf, grid, render, render_map, scoring, situation, sommets, webcams
+from meteo import arome, ecmwf, grid, marine, render, render_map, scoring, situation, sommets, webcams
 
 log = logging.getLogger("rapport")
 ROOT = Path(__file__).parent
@@ -163,6 +163,23 @@ def main():
     sources = run_txt + (f" · au-delà : {ec['model']}" if ec else "") + (
         f" et ensemble {ens['model']} ({ens['n_members']} scénarios)" if ens else "") + " (Open-Meteo)"
     merged = scoring.merge(ar, ec, n, arome_lag=ar_lag, ens=ens)
+
+    # Mer : vagues aux points en mer (activités, cases, références au large)
+    sea_idx = sorted({i for s in cfg["spots"] if s["type"] == "mer" for i in s["_obj"]}
+                     | {i for c, i in zip(grid_cells, grid_idx) if c["kind"] == "mer"}
+                     | {idx_h[k] for k in ("mer_est", "mer_nord") if k in idx_h})
+    sea = marine.fetch([pts.coords[i] for i in sea_idx]) if sea_idx else None
+    if sea:
+        full = {"times": sea["times"]}
+        for k in ("hs", "sw", "per", "dir"):
+            arr = np.full((len(sea["times"]), n), np.nan)
+            arr[:, sea_idx] = sea[k]
+            full[k] = arr
+        scoring.add_series(merged, full, ("hs", "sw", "per", "dir"))
+        sources += " · vagues : Open-Meteo Marine"
+    else:
+        warnings.append("Modèle de vagues indisponible : activités en mer non notées.")
+    debug["mer_points"] = len(sea_idx)
     # état « dans le nuage » : sommets + objectifs en altitude à leur altitude réelle,
     # mailles de la grille à l'altitude de leur relief (lissé) dans le modèle
     grid_alts = [grid.model_altitude(merged, i) for i in grid_idx]
@@ -195,10 +212,16 @@ def main():
                                             idx_h.get("est"), idx_h.get("ouest")) for s in cfg.get("sommets", [])],
         })
     nb_today = now if first == 0 else None
-    grid_data = grid.compute(merged, grid_idx, grid_alts, [date.fromisoformat(d["date"]) for d in days], nb_today)
-    grid_data["cells"] = [{"lat": c["lat"], "lon": c["lon"], "alt": None if np.isnan(a) else round(a)}
+    grid_data = grid.compute(merged, grid_idx, grid_alts, [date.fromisoformat(d["date"]) for d in days], nb_today,
+                             kinds=[c["kind"] for c in grid_cells])
+    grid_data["cells"] = [{"lat": c["lat"], "lon": c["lon"], "kind": c["kind"], "ile": c["ile"], "size": c["size"],
+                           "alt": None if (np.isnan(a) or c["kind"] == "mer") else round(a)}
                           for c, a in zip(grid_cells, grid_alts)]
     grid_data["step"] = grid.STEP
+    for d in days:
+        dd = date.fromisoformat(d["date"])
+        d["situation"]["texte"] = d["situation"].get("texte", []) + situation.islands_and_sea(
+            dd, merged, d["situation"].get("wind", float("nan")), idx_h.get("mer_est"), idx_h.get("mer_nord"))
     report = {
         "generated": f"{render.fdate(local.date())} à {local.hour}h{local:%M}",
         "sources": sources, "warnings": warnings, "days": days, "spots": cfg["spots"],
@@ -213,8 +236,9 @@ def main():
 
     def geo(spot):
         p = next(p for p in spot["points"] if p["role"] == "objectif")
-        cat = "riviere" if spot["type"] == "riviere" else ("sommet" if spot["_high"] else "rando")
-        return {"id": spot["id"], "nom": spot["nom"], "cat": cat, "type": spot["type"], "lat": p["lat"],
+        cat = render.cat_of(spot)
+        return {"id": spot["id"], "nom": spot["nom"], "cat": cat, "type": spot["type"], "ile": spot.get("ile", ""),
+                "lat": p["lat"],
                 "lon": p["lon"], "secteur": spot["secteur"], "niveau": spot["niveau"],
                 "acces": spot.get("acces", ""), "conseil": spot.get("conseil", "")}
 

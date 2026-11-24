@@ -119,3 +119,37 @@ def day_situation(d: date, profiles: dict, i_up: int | None, merged, i_up_ec: in
                    "même avec un sommet dégagé ; l'air sec qui l'accompagne limite souvent les averses.")
     return {"texte": txt, "source": src, "wind": wind, "moist_top": top, "inversion": inv, "rh700": rh700,
             "dust": dmax}
+
+
+def islands_and_sea(d: date, merged, wind: float, i_sea_e: int | None, i_sea_n: int | None) -> list[str]:
+    """Lignes « îles plates » et « mer », de 8h à 16h."""
+    from .mer import dir_name
+    hours = [datetime(d.year, d.month, d.day, h, tzinfo=TZ).astimezone(timezone.utc) for h in range(8, 17)]
+
+    def mean(k, i):
+        if i is None or k not in merged.data:
+            return float("nan")
+        vals = [merged.data[k][merged.index[t], i] for t in hours if t in merged.index]
+        vals = [v for v in vals if not math.isnan(v)]
+        return float(np.mean(vals)) if vals else float("nan")
+
+    txt = []
+    if not math.isnan(wind):
+        if wind <= WIND_WEAK:
+            txt.append("Grande-Terre, Marie-Galante, Désirade : soleil le matin, averses de chaleur possibles "
+                       "l'après-midi sur l'intérieur (Grands Fonds). Forte chaleur sur les sentiers littoraux "
+                       "exposés : partir tôt.")
+        else:
+            txt.append("Grande-Terre et îles plates : averses brèves apportées par l'alizé, vite passées ; "
+                       "vent plus frais et mer plus formée côté Atlantique.")
+    hs, sw, per, dr = (mean(k, i_sea_e) for k in ("hs", "sw", "per", "dir"))
+    if not math.isnan(hs):
+        calm = "mer calme" if hs < 1 else ("mer peu agitée" if hs < 1.5 else ("mer agitée" if hs < 2.5 else "mer forte"))
+        f1 = lambda x: f"{x:.1f}".replace(".", ",")  # noqa: E731
+        txt.append(f"Mer au large (Atlantique) : creux ~{f1(hs)} m ({calm}), houle de {dir_name(dr)} "
+                   f"~{f1(sw)} m / {per:.0f} s. Côte sous-le-vent (Bouillante, Saintes) et lagons plus abrités.")
+    swn, dn = mean("sw", i_sea_n), mean("dir", i_sea_n)
+    if not math.isnan(swn) and swn >= 1.0 and not math.isnan(dn) and (dn >= 300 or dn <= 40):
+        txt.append(f"Houle de nord (~{swn:.1f} m) : vagues à Port-Louis et sur la côte nord, prudence à la baignade."
+                   .replace(f"{swn:.1f}", f"{swn:.1f}".replace(".", ",")))
+    return txt

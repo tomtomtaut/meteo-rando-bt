@@ -19,6 +19,7 @@ VARS = {
     "rh850": "relative_humidity_850hPa",
     "rh700": "relative_humidity_700hPa",
     "ws925": "wind_speed_925hPa",
+    "ws10": "wind_speed_10m",
     "rh": "relative_humidity_2m",
     "gust": "wind_gusts_10m",
     "t2m": "temperature_2m",
@@ -26,18 +27,49 @@ VARS = {
 }
 
 
+CHUNK = 100
+
+
 def fetch(points: list[tuple[float, float]], alts: list[float]) -> dict | None:
+    """Comme _fetch, par paquets de 100 points (limite de longueur d'URL)."""
+    parts = [_fetch(points[i:i + CHUNK]) for i in range(0, len(points), CHUNK)]
+    if not parts or any(p is None for p in parts):
+        return None
+    out = {"times": parts[0]["times"], "model": parts[0]["model"]}
+    for k in VARS:
+        if all(k in p for p in parts):
+            out[k] = np.concatenate([p[k] for p in parts], axis=1)
+    # Variables en altitude parfois absentes du modèle à 9 km : on les prend à 25 km
+    missing = [k for k in ("rh850", "rh700", "ws925") if k not in out]
+    if missing:
+        extra = [_fetch(points[i:i + CHUNK], models=("ecmwf_ifs025",), only=missing)
+                 for i in range(0, len(points), CHUNK)]
+        if all(e is not None for e in extra):
+            idx = {t: i for i, t in enumerate(extra[0]["times"])}
+            for k in missing:
+                if all(k in e for e in extra):
+                    arr = np.concatenate([e[k] for e in extra], axis=1)
+                    full = np.full((len(out["times"]), arr.shape[1]), np.nan)
+                    for i, t in enumerate(out["times"]):
+                        if t in idx:
+                            full[i] = arr[idx[t]]
+                    out[k] = full
+    return out
+
+
+def _fetch(points: list[tuple[float, float]], models=MODELS, only=None) -> dict | None:
     """Renvoie {"times": [...UTC], "model": str, var: array(T, P)}."""
+    wanted = {k: v for k, v in VARS.items() if only is None or k in only}
     params = {
         "latitude": ",".join(f"{la:.4f}" for la, _ in points),
         "longitude": ",".join(f"{lo:.4f}" for _, lo in points),
-        "hourly": ",".join(VARS.values()),
+        "hourly": ",".join(wanted.values()),
         "timezone": "GMT",
         "past_days": 2,
         "forecast_days": 5,
         "wind_speed_unit": "kmh",
     }
-    for model in MODELS:
+    for model in models:
         try:
             r = requests.get(API, params={**params, "models": model}, timeout=60)
             r.raise_for_status()
@@ -48,7 +80,7 @@ def fetch(points: list[tuple[float, float]], alts: list[float]) -> dict | None:
         data = data if isinstance(data, list) else [data]
         times = [datetime.fromisoformat(t).replace(tzinfo=timezone.utc) for t in data[0]["hourly"]["time"]]
         out = {"times": times, "model": model}
-        for k, v in VARS.items():
+        for k, v in wanted.items():
             cols = [d["hourly"].get(v) for d in data]
             if any(c is None for c in cols):
                 continue
@@ -56,7 +88,7 @@ def fetch(points: list[tuple[float, float]], alts: list[float]) -> dict | None:
             if np.all(np.isnan(arr)):
                 continue
             out[k] = arr
-        if "precip" in out:
+        if "precip" in out or only:
             log.info("Open-Meteo : modèle %s, %d heures", model, len(times))
             return out
     return None

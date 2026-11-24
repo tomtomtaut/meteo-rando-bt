@@ -1,4 +1,4 @@
-"""Webcams autour de la Basse-Terre (et des Saintes, d'où l'on voit le sud du massif).
+"""Webcams de la Guadeloupe et de ses îles.
 
 Avec une clé gratuite de l'API Windy Webcams (secret GitHub WINDY_WEBCAMS_KEY), on liste
 automatiquement toutes les webcams de la zone. Sans clé, on garde celles de spots.json.
@@ -14,9 +14,9 @@ import requests
 log = logging.getLogger(__name__)
 
 API = "https://api.windy.com/webcams/api/v3/webcams"
-CENTER = (16.10, -61.68)      # milieu de la Basse-Terre
-RADIUS_KM = 40
-BBOX = (15.80, 16.40, -61.85, -61.52)  # Basse-Terre + Saintes, sans la Grande-Terre
+CENTER = (16.15, -61.40)      # milieu de l'archipel
+RADIUS_KM = 70
+BBOX = (15.75, 16.60, -61.90, -60.90)  # toute la Guadeloupe et ses îles
 
 
 def player(wid: str) -> str:

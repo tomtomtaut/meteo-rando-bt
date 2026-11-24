@@ -73,7 +73,7 @@ def merge(arome: dict | None, ecmwf: dict | None, n_points: int,
     idx = {t: i for i, t in enumerate(times)}
     T = len(times)
     data, source = {}, ["ECMWF" if ecmwf else "—"] * T
-    for var in ("precip", "lcc", "mcc", "rh", "rh850", "rh700", "ws925", "gust", "t2m", "cape", "sp"):
+    for var in ("precip", "lcc", "mcc", "rh", "rh850", "rh700", "ws925", "ws10", "gust", "t2m", "cape", "sp"):
         arr = np.full((T, n_points), np.nan)
         if ecmwf and var in ecmwf:
             for i, t in enumerate(ecmwf["times"]):
@@ -144,9 +144,16 @@ def rain_stats(m: Merged, ti: int, cols: list[int], pctl: float) -> tuple[float,
     return max(rains), (max(probs) if probs else None)
 
 
-def hour_eval(spot: dict, m: Merged, ti: int) -> tuple[float, dict]:
+def hour_eval(spot: dict, m: Merged, ti: int) -> tuple[float | None, dict]:
     obj = spot["_obj"]
     rain, prob = rain_stats(m, ti, obj, RAIN_PCTL)
+    if spot["type"] == "mer":
+        from . import mer
+        gust, cape = _max(m, "gust", ti, obj), _max(m, "cape", ti, obj)
+        storm = _nz(cape) >= CAPE_UNSTABLE and (rain >= RAIN_WET or (prob or 0) >= 0.3)
+        score, sea = mer.hour_eval(spot, m, ti, rain, prob, storm, gust)
+        return score, {"rain": rain, "prob": prob, "in_cloud": False, "gust": gust, "storm": storm,
+                       "t2m": float("nan"), **sea}
     lcc, rh = _max(m, "lcc", ti, obj), _max(m, "rh", ti, obj)
     gust, cape, t2m = _max(m, "gust", ti, obj), _max(m, "cape", ti, obj), _max(m, "t2m", ti, obj)
     pen = _lookup(RAIN_PENALTY, rain)
@@ -166,8 +173,8 @@ def hour_eval(spot: dict, m: Merged, ti: int) -> tuple[float, dict]:
     storm = _nz(cape) >= CAPE_UNSTABLE and (rain >= RAIN_WET or (prob or 0) >= 0.3)
     if storm:
         pen += 15
-    if spot["type"] == "littoral" and _nz(t2m) >= HOT:
-        pen += 10
+    if spot["type"] == "littoral" or spot.get("expose"):
+        pen += 20 if _nz(t2m) >= HOT + 1 else (10 if _nz(t2m) >= HOT - 1 else 0)
     return max(0.0, 100.0 - pen), {"rain": rain, "prob": prob, "in_cloud": in_cloud, "gust": gust,
                                    "storm": storm, "t2m": t2m}
 
@@ -187,6 +194,8 @@ def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None =
         if any(t is None for t in tis):
             continue
         evals = [hour_eval(spot, m, ti) for ti in tis]
+        if any(e[0] is None for e in evals):
+            continue
         scores = [e[0] for e in evals]
         score = 0.6 * float(np.mean(scores)) + 0.4 * min(scores)
         nogo, reasons = False, []
@@ -237,8 +246,11 @@ def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None =
         gmax = max(_nz(e[1]["gust"]) for e in evals)
         if gmax >= 50:
             reasons.append(f"Rafales jusqu'à {gmax:.0f} km/h")
-        if spot["type"] == "littoral" and max(_nz(e[1]["t2m"]) for e in evals) >= HOT:
-            reasons.append("Chaud : prévoir de l'eau")
+        if (spot["type"] == "littoral" or spot.get("expose")) and max(_nz(e[1]["t2m"]) for e in evals) >= HOT - 1:
+            reasons.append(f"Chaud ({max(_nz(e[1]['t2m']) for e in evals):.0f} °C) : partir tôt, beaucoup d'eau")
+        if spot["type"] == "mer":
+            from . import mer
+            reasons += mer.reasons(spot, [e[1] for e in evals])
 
         score = 0.0 if nogo else max(0.0, min(100.0, score))
         arome_share = sum(m.source[ti] == "AROME" for ti in tis) / dur
@@ -268,16 +280,36 @@ def label(r: dict) -> str:
     return "Top" if s >= 75 else "Bien" if s >= 55 else "Moyen" if s >= 35 else "À éviter"
 
 
+def _cat(spot: dict) -> str:
+    if spot["type"] == "mer":
+        return spot.get("mer", "calme")
+    return "riviere" if spot["type"] == "riviere" else ("sommet" if spot.get("_high") else "rando")
+
+
 def top3(results: list[tuple[dict, dict]]) -> list[tuple[dict, dict]]:
-    """results = [(spot, eval)] d'un jour. Meilleurs scores, un seul par secteur."""
+    """results = [(spot, eval)] d'un jour. Meilleurs scores, varié : un seul par secteur et par type d'activité."""
     ok = [(s, r) for s, r in results if r.get("score") is not None and not r["nogo"]]
     ok.sort(key=lambda sr: -(sr[1]["score"] + NIVEAU_BONUS.get(sr[0]["niveau"], 0)))
-    picked, sectors = [], set()
+    picked, sectors, cats = [], set(), set()
     for s, r in ok:
-        if s["secteur"] in sectors:
+        if s["secteur"] in sectors or _cat(s) in cats:
             continue
         picked.append((s, r))
         sectors.add(s["secteur"])
+        cats.add(_cat(s))
         if len(picked) == 3:
             break
     return picked
+
+
+def add_series(m: Merged, series: dict, keys) -> None:
+    """Ajoute des séries horaires (T', P) d'une autre source, alignées sur l'axe de temps de m."""
+    idx = {t: i for i, t in enumerate(series["times"])}
+    for k in keys:
+        if k not in series:
+            continue
+        arr = np.full((len(m.times), series[k].shape[1]), np.nan)
+        for i, t in enumerate(m.times):
+            if t in idx:
+                arr[i] = series[k][idx[t]]
+        m.data[k] = arr

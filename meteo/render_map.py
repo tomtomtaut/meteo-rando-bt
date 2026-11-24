@@ -10,7 +10,7 @@ def page() -> str:
     return r"""<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Où sortir en Basse-Terre — carte</title>
+<title>Où sortir en Guadeloupe — carte</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root { --bg:#f6f5f1; --fg:#1d1d1b; --muted:#6b6b66; --card:#fff; --line:rgba(128,128,128,.25); --acc:#1f6f4a; }
@@ -63,7 +63,7 @@ def page() -> str:
 </style></head>
 <body><div class="app">
 <header>
-  <div class="top"><h1>Où sortir en Basse-Terre</h1>
+  <div class="top"><h1>Où sortir en Guadeloupe</h1>
     <span class="switch"><b>Carte</b> <a href="liste.html">Liste</a></span></div>
   <details class="meta"><summary id="meta">Chargement…</summary><span id="sources"></span></details>
 </header>
@@ -82,9 +82,12 @@ def page() -> str:
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const CATS = {
-  rando:   {label: "Randos",   legend: "pluie, rafales, orages à l'heure choisie"},
+  rando:   {label: "Randos",   legend: "pluie, rafales, chaleur, orages à l'heure choisie"},
   riviere: {label: "Rivières", legend: "pluie des 24 h avant + pluie à l'heure (crues)"},
   sommet:  {label: "Sommets",  legend: "comme rando + nuage à l'altitude de la case"},
+  mer:     {label: "Mer calme", legend: "kayak, snorkeling, plongée : petite mer, peu de vent"},
+  surf:    {label: "Surf",     legend: "houle : hauteur et période (orientation jugée sur les spots)"},
+  kite:    {label: "Kite / wing", legend: "vent établi 22-45 km/h, rafales régulières"},
 };
 const SRC = {"AROME": "AROME 2,5 km", "ECMWF-ens": "ECMWF (tendance)", "ECMWF": "ECMWF (tendance)"};
 const ETAT = {degage: "dégagé", mer: "au-dessus des nuages", incertain: "incertain", nuage: "dans le nuage"};
@@ -113,20 +116,25 @@ function cellText(i) {
   const alt = c.alt !== null ? `~${c.alt} m (relief du modèle)` : "altitude inconnue";
   const cloud = R("etat") ? `À l'altitude de la case (${alt}) : ${ETAT[R("etat")] || R("etat")}` +
     (R("nuage_case") !== null ? ` — nuage ${R("nuage_case")} %, humidité ${R("hum_case")} %` : "") : "";
+  const sea = [`Vagues : ${fmt(R("vagues"))} m`, `Houle : ${fmt(R("houle"))} m · ${fmt(R("periode"), 0)} s · de ${R("dir_houle") || "—"}`,
+               `Vent : ${fmt(R("vent"), 0)} km/h (${R("vent") === null ? "—" : Math.round(R("vent") / 1.852)} nœuds) · rafales ${fmt(R("rafales"), 0)} km/h`, rain];
   const lines = {
-    rando: [rain, `Rafales : ${fmt(R("rafales"), 0)} km/h`, `Nuages bas : ${fmt(R("nuages_bas"), 0)} %`, cloud],
+    mer: sea, surf: sea, kite: [sea[2], sea[0], rain],
+    rando: [rain, `Rafales : ${fmt(R("rafales"), 0)} km/h`, `Vent : ${fmt(R("vent"), 0)} km/h`,
+            `Nuages bas : ${fmt(R("nuages_bas"), 0)} %`, cloud],
     riviere: [`Pluie des 24 h avant : ${fmt(R("pluie24"))} mm (90e percentile, case ±2,5 km)`, rain,
               `Rafales : ${fmt(R("rafales"), 0)} km/h`],
     sommet: [cloud, rain, `Nuages bas : ${fmt(R("nuages_bas"), 0)} %`, `Rafales : ${fmt(R("rafales"), 0)} km/h`],
   }[state.cat].filter(Boolean);
-  return t + lines.join("<br>") + `<br><span class="muted">Maille ${fmt(c.lat, 3)}, ${fmt(c.lon, 3)}</span>`;
+  return t + lines.join("<br>") + `<br><span class="muted">${c.ile || "En mer"} · case ${fmt(c.lat, 3)}, ${fmt(c.lon, 3)}` +
+    ` (${c.kind === "mer" ? "5,5 km, modèle de vagues" : "maille AROME 2,5 km"})</span>`;
 }
 
 function spotText(sp) {
   const r = D.days[state.day].scores[sp.id] || {};
   const pill = r.score === null || r.score === undefined ? "" :
     `<span class="pill" style="background:${color(r.score)}">${r.label} · ${r.score}</span>`;
-  return `<b>${sp.nom}</b> ${pill}<br>` +
+  return `<b>${sp.nom}</b> ${pill}<br><span class="muted">${sp.ile} · ${sp.secteur}</span><br>` +
     (r.start ? `Départ ${r.start} → retour vers ${r.end} · <span class="muted">${SRC[r.source] || r.source || ""}</span><br>` : "") +
     (r.reasons ? r.reasons.join(" · ") + "<br>" : "") +
     (sp.conseil ? `<span class="muted">${sp.conseil}</span><br>` : "") +
@@ -137,7 +145,9 @@ function draw() {
   const day = G.days[state.day];
   rects.forEach((r, i) => {
     const s = day.score[state.cat][state.h][i], src = day.src[state.h];
-    r.setStyle({fillColor: color(s), fillOpacity: s === null ? 0.05 : (src === "AROME" ? 0.55 : 0.25)});
+    r.setStyle({fillColor: color(s), fillOpacity: s === null ? 0 : (src === "AROME" ? 0.55 : 0.25),
+                opacity: s === null ? 0 : 0.5});
+    const el = r.getElement && r.getElement(); if (el) el.style.pointerEvents = s === null ? "none" : "auto";
   });
   markers.forEach(({m, sp}) => {
     const show = sp.cat === state.cat;
@@ -199,20 +209,19 @@ Promise.all([fetch("grid.json").then(r => r.json()), fetch("data.json").then(r =
   G = g; D = d;
   document.getElementById("meta").textContent = `Rapport du ${d.generated} · sources`;
   document.getElementById("sources").textContent = d.sources;
-  map = L.map("map", {zoomControl: true}).setView([16.13, -61.68], 11);
+  map = L.map("map", {zoomControl: true}).setView([16.15, -61.42], 10);
   L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {maxZoom: 16,
     attribution: '© OpenStreetMap, SRTM · style © OpenTopoMap (CC-BY-SA)'}).addTo(map);
-  const half = (g.step || 0.025) / 2;
   g.cells.forEach((c, i) => {
+    const half = (c.size || g.step || 0.025) / 2;
     const r = L.rectangle([[c.lat - half, c.lon - half], [c.lat + half, c.lon + half]],
       {weight: 0.4, color: "#ffffff", opacity: 0.5, fillOpacity: 0.5}).addTo(map);
-    if (!TOUCH) r.bindTooltip(() => cellText(i), {sticky: true, className: "tt"});
-    r.on("click", e => L.popup().setLatLng(e.latlng).setContent(cellText(i)).openOn(map));
+    r.on("click", e => L.popup({maxWidth: 300}).setLatLng(e.latlng).setContent(cellText(i)).openOn(map));
     rects.push(r);
   });
   d.spots.forEach(sp => {
     const m = L.circleMarker([sp.lat, sp.lon], {radius: 8, weight: 2, color: "#fff", fillOpacity: 1});
-    m.bindPopup(() => spotText(sp)); m.bindTooltip(sp.nom, {direction: "top", offset: [0, -6]});
+    m.bindPopup(() => spotText(sp));
     markers.push({m, sp});
   });
   (d.webcams || []).filter(w => w.lat && w.lon).forEach(w => {

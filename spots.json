@@ -1,5 +1,5 @@
 {
-  "_info": "Activités « À faire » de la fiche Activités Guadeloupe — TTL (Basse-Terre, terre et rivière). Coordonnées approximatives (précision ~500 m), à corriger si besoin. type : sommet | rando | riviere | littoral | itinerance. role : objectif (là où on est) | amont (bassin versant, pour les crues).",
+  "_info": "Activités « À faire » de la fiche Activités Guadeloupe — TTL (toute la Guadeloupe, terre, rivière et mer). Coordonnées approximatives (précision ~500 m), à corriger si besoin. type : sommet | rando | riviere | littoral | itinerance. role : objectif (là où on est) | amont (bassin versant, pour les crues).",
   "spots": [
     {
       "id": "soufriere-echelle",
@@ -24,7 +24,8 @@
           "alt": 1300,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "soufriere-carmichael",
@@ -49,7 +50,8 @@
           "alt": 1467,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "grande-decouverte",
@@ -67,7 +69,8 @@
           "alt": 1263,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "victor-hugues",
@@ -107,7 +110,8 @@
           "alt": 300,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "bains-matouba",
@@ -132,7 +136,8 @@
           "alt": 1150,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "bain-des-amours",
@@ -157,7 +162,8 @@
           "alt": 600,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "bassin-bleu",
@@ -182,7 +188,8 @@
           "alt": 900,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "grande-voute",
@@ -200,7 +207,8 @@
           "alt": 680,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "grande-pointe",
@@ -218,7 +226,8 @@
           "alt": 30,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "carbet-aire",
@@ -243,7 +252,8 @@
           "alt": 1100,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "carbet-1re-chute",
@@ -268,7 +278,8 @@
           "alt": 1250,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "carbet-3e-chute",
@@ -293,7 +304,8 @@
           "alt": 800,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "carbet-carmichael",
@@ -319,7 +331,8 @@
           "alt": 1414,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "citerne",
@@ -337,7 +350,8 @@
           "alt": 1150,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "cascade-carmichael",
@@ -362,7 +376,8 @@
           "alt": 1100,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "cascade-kong",
@@ -387,7 +402,8 @@
           "alt": 1000,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "trou-a-diable",
@@ -412,7 +428,8 @@
           "alt": 700,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "trois-cretes-beaugendre",
@@ -437,7 +454,8 @@
           "alt": 1000,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "trois-cretes-grande-riviere",
@@ -463,7 +481,8 @@
           "alt": 1000,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "mamelles",
@@ -488,7 +507,8 @@
           "alt": 716,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "merwart",
@@ -513,7 +533,8 @@
           "alt": 750,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "alizes-nord",
@@ -545,7 +566,8 @@
           "alt": 400,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "baille-argent",
@@ -570,7 +592,8 @@
           "alt": 400,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "tete-allegre",
@@ -595,7 +618,8 @@
           "alt": 300,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "trois-cornes",
@@ -620,7 +644,8 @@
           "alt": 450,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "acomat",
@@ -645,7 +670,8 @@
           "alt": 350,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "gros-morne-deshaies",
@@ -664,7 +690,8 @@
           "alt": 270,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "littoral-deshaies",
@@ -683,7 +710,8 @@
           "alt": 20,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "littoral-sainte-rose",
@@ -701,7 +729,8 @@
           "alt": 10,
           "role": "objectif"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "tambour",
@@ -726,7 +755,8 @@
           "alt": 500,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "gras-tambour",
@@ -751,7 +781,8 @@
           "alt": 500,
           "role": "amont"
         }
-      ]
+      ],
+      "ile": "Basse-Terre"
     },
     {
       "id": "gr-g1",
@@ -797,6 +828,717 @@
           "lon": -61.745,
           "alt": 400,
           "role": "objectif"
+        }
+      ],
+      "ile": "Basse-Terre"
+    },
+    {
+      "id": "gt-nord-1",
+      "nom": "Boucle du Nord Grande-Terre · étape 1 : Port-Louis → Anse Laborde",
+      "ile": "Grande-Terre",
+      "secteur": "Nord Grande-Terre",
+      "type": "littoral",
+      "niveau": "Touristique",
+      "duree_h": 5,
+      "acces": "Bus U6 / U9 pour revenir.",
+      "points": [
+        {
+          "nom": "Port-Louis",
+          "lat": 16.42,
+          "lon": -61.535,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Anse Laborde",
+          "lat": 16.465,
+          "lon": -61.515,
+          "alt": 10,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-nord-2",
+      "nom": "Boucle du Nord Grande-Terre · étape 2 : Anse Laborde → Porte d'Enfer",
+      "ile": "Grande-Terre",
+      "secteur": "Nord Grande-Terre",
+      "type": "littoral",
+      "niveau": "Intermédiaire",
+      "duree_h": 5,
+      "conseil": "Matin ; vent fort possible.",
+      "acces": "Bus du Nord Grande-Terre pour revenir.",
+      "points": [
+        {
+          "nom": "Anse Laborde",
+          "lat": 16.465,
+          "lon": -61.515,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Grande Vigie",
+          "lat": 16.51,
+          "lon": -61.465,
+          "alt": 80,
+          "role": "objectif"
+        },
+        {
+          "nom": "Porte d'Enfer",
+          "lat": 16.48,
+          "lon": -61.44,
+          "alt": 10,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-nord-3",
+      "nom": "Boucle du Nord Grande-Terre · étape 3 : trace des Falaises",
+      "ile": "Grande-Terre",
+      "secteur": "Nord Grande-Terre (côte atlantique)",
+      "type": "littoral",
+      "niveau": "Intermédiaire",
+      "duree_h": 5,
+      "conseil": "Matin ; vent fort possible.",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Porte d'Enfer",
+          "lat": 16.48,
+          "lon": -61.44,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Falaises",
+          "lat": 16.44,
+          "lon": -61.41,
+          "alt": 40,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-nord-complet",
+      "nom": "Boucle du Nord Grande-Terre (complète, 3 jours)",
+      "ile": "Grande-Terre",
+      "secteur": "Nord Grande-Terre",
+      "type": "itinerance",
+      "niveau": "Intermédiaire",
+      "duree_h": 8,
+      "expose": true,
+      "conseil": "3 jours : regarder plutôt s'il y a plusieurs bons jours d'affilée.",
+      "acces": "Bus U6 / U9.",
+      "points": [
+        {
+          "nom": "Port-Louis",
+          "lat": 16.42,
+          "lon": -61.535,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Grande Vigie",
+          "lat": 16.51,
+          "lon": -61.465,
+          "alt": 80,
+          "role": "objectif"
+        },
+        {
+          "nom": "Falaises",
+          "lat": 16.44,
+          "lon": -61.41,
+          "alt": 40,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-bois-baron",
+      "nom": "Bois Baron → Anse Maurice",
+      "ile": "Grande-Terre",
+      "secteur": "Le Moule / côte atlantique",
+      "type": "littoral",
+      "niveau": "Intermédiaire",
+      "duree_h": 4,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Bois Baron",
+          "lat": 16.36,
+          "lon": -61.36,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Anse Maurice",
+          "lat": 16.4,
+          "lon": -61.39,
+          "alt": 10,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-escalade-moule",
+      "nom": "Escalade en falaise au Moule",
+      "ile": "Grande-Terre",
+      "secteur": "Le Moule",
+      "type": "rando",
+      "niveau": "Intermédiaire",
+      "duree_h": 4,
+      "expose": true,
+      "conseil": "Rocher sec de préférence : regarder la pluie de la veille.",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Falaises du Moule",
+          "lat": 16.34,
+          "lon": -61.34,
+          "alt": 20,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-est-1",
+      "nom": "Littoral est (1/3) : Anse à la Gourde → Baie Olive",
+      "ile": "Grande-Terre",
+      "secteur": "Saint-François",
+      "type": "littoral",
+      "niveau": "Intermédiaire",
+      "duree_h": 2,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Anse à la Gourde",
+          "lat": 16.26,
+          "lon": -61.22,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Baie Olive",
+          "lat": 16.28,
+          "lon": -61.265,
+          "alt": 10,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-est-2",
+      "nom": "Littoral est (2/3) : Anse à la Baie → Anse à l'Eau",
+      "ile": "Grande-Terre",
+      "secteur": "Saint-François",
+      "type": "littoral",
+      "niveau": "Touristique",
+      "duree_h": 3,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Anse à la Baie",
+          "lat": 16.285,
+          "lon": -61.27,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Anse à l'Eau",
+          "lat": 16.31,
+          "lon": -61.3,
+          "alt": 10,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-est-3",
+      "nom": "Littoral est (3/3) : Anse à l'Eau → Anse Montal",
+      "ile": "Grande-Terre",
+      "secteur": "Saint-François → Le Moule",
+      "type": "littoral",
+      "niveau": "Intermédiaire",
+      "duree_h": 5,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Anse à l'Eau",
+          "lat": 16.31,
+          "lon": -61.3,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Anse Montal",
+          "lat": 16.33,
+          "lon": -61.34,
+          "alt": 10,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-beautiran",
+      "nom": "Sentier de Beautiran",
+      "ile": "Grande-Terre",
+      "secteur": "Petit-Canal",
+      "type": "littoral",
+      "niveau": "Touristique",
+      "duree_h": 4,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Beautiran",
+          "lat": 16.39,
+          "lon": -61.47,
+          "alt": 10,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-vieux-bourg",
+      "nom": "Littoral Vieux-Bourg / Babin et îlet Macou",
+      "ile": "Grande-Terre",
+      "secteur": "Morne-à-l'Eau",
+      "type": "littoral",
+      "niveau": "Touristique",
+      "duree_h": 3,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Vieux-Bourg",
+          "lat": 16.33,
+          "lon": -61.5,
+          "alt": 10,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "gt-vtt-grands-fonds",
+      "nom": "VTT guidé dans les Grands Fonds",
+      "ile": "Grande-Terre",
+      "secteur": "Grands Fonds",
+      "type": "rando",
+      "niveau": "Hors sentiers",
+      "duree_h": 4,
+      "expose": true,
+      "conseil": "Chemins boueux après la pluie.",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Grands Fonds",
+          "lat": 16.27,
+          "lon": -61.42,
+          "alt": 80,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mg-falaises",
+      "nom": "Trace des falaises de Marie-Galante",
+      "ile": "Marie-Galante",
+      "secteur": "Capesterre de Marie-Galante",
+      "type": "littoral",
+      "niveau": "Intermédiaire",
+      "duree_h": 4,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Borée",
+          "lat": 15.91,
+          "lon": -61.21,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Chapelle Sainte-Thérèse",
+          "lat": 15.96,
+          "lon": -61.205,
+          "alt": 40,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "des-grande-montagne",
+      "nom": "Grande Montagne (La Désirade)",
+      "ile": "La Désirade",
+      "secteur": "La Désirade",
+      "type": "rando",
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "expose": true,
+      "conseil": "Partir tôt, beaucoup d'eau.",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Grande Montagne",
+          "lat": 16.32,
+          "lon": -61.05,
+          "alt": 275,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "des-tour",
+      "nom": "Tour de la Désirade et circuit nord par la Grande Ravine",
+      "ile": "La Désirade",
+      "secteur": "La Désirade",
+      "type": "itinerance",
+      "niveau": "Hors sentiers",
+      "duree_h": 5,
+      "expose": true,
+      "conseil": "Chaud et sec : partir tôt avec beaucoup d'eau.",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Beauséjour",
+          "lat": 16.3,
+          "lon": -61.09,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Pointe Doublé",
+          "lat": 16.335,
+          "lon": -61.005,
+          "alt": 10,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "des-vtt",
+      "nom": "VTT guidé à la Désirade",
+      "ile": "La Désirade",
+      "secteur": "La Désirade",
+      "type": "rando",
+      "niveau": "Hors sentiers",
+      "duree_h": 4,
+      "expose": true,
+      "conseil": "Partir tôt.",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Désirade",
+          "lat": 16.315,
+          "lon": -61.06,
+          "alt": 100,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "sai-trace-bleue",
+      "nom": "Trace bleue de Terre-de-Bas",
+      "ile": "Les Saintes",
+      "secteur": "Les Saintes (Terre-de-Bas)",
+      "type": "rando",
+      "niveau": "Hors sentiers",
+      "duree_h": 3,
+      "expose": true,
+      "conseil": "Partir tôt (chaleur).",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Terre-de-Bas",
+          "lat": 15.855,
+          "lon": -61.635,
+          "alt": 150,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "sai-escalade",
+      "nom": "Escalade aux Saintes (Morne Morel, Pain de Sucre)",
+      "ile": "Les Saintes",
+      "secteur": "Les Saintes (Terre-de-Haut)",
+      "type": "rando",
+      "niveau": "Hors sentiers",
+      "duree_h": 4,
+      "acces": "État de l'équipement inconnu ; un secteur peut-être interdit.",
+      "points": [
+        {
+          "nom": "Terre-de-Haut",
+          "lat": 15.865,
+          "lon": -61.59,
+          "alt": 50,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-kayak-pcsm",
+      "nom": "Kayak dans le Petit Cul-de-Sac Marin",
+      "ile": "Mer",
+      "secteur": "Petit Cul-de-Sac Marin",
+      "type": "mer",
+      "mer": "calme",
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Petit Cul-de-Sac Marin",
+          "lat": 16.19,
+          "lon": -61.56,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-kayak-gosier",
+      "nom": "Kayak vers l'îlet du Gosier",
+      "ile": "Mer",
+      "secteur": "Le Gosier",
+      "type": "mer",
+      "mer": "calme",
+      "niveau": "Touristique",
+      "duree_h": 2,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Îlet du Gosier",
+          "lat": 16.2,
+          "lon": -61.49,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-kayak-pigeon",
+      "nom": "Kayak de mer vers les îlets Pigeon",
+      "ile": "Mer",
+      "secteur": "Bouillante",
+      "type": "mer",
+      "mer": "calme",
+      "niveau": "Touristique",
+      "duree_h": 4,
+      "conseil": "Mer calme le matin.",
+      "acces": "Mouillage et contact avec le corail interdits.",
+      "points": [
+        {
+          "nom": "Îlets Pigeon",
+          "lat": 16.165,
+          "lon": -61.79,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-plongee-cousteau",
+      "nom": "Plongée en Réserve Cousteau (îlets Pigeon)",
+      "ile": "Mer",
+      "secteur": "Bouillante",
+      "type": "mer",
+      "mer": "calme",
+      "niveau": "Touristique",
+      "duree_h": 4,
+      "acces": "Réglementé (cœur marin).",
+      "points": [
+        {
+          "nom": "Réserve Cousteau",
+          "lat": 16.17,
+          "lon": -61.8,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-snorkel-saintes",
+      "nom": "Snorkeling aux Saintes (Pain de Sucre, Anse Crawen, Pompierre)",
+      "ile": "Mer",
+      "secteur": "Les Saintes",
+      "type": "mer",
+      "mer": "calme",
+      "niveau": "Touristique",
+      "duree_h": 3,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Terre-de-Haut",
+          "lat": 15.87,
+          "lon": -61.58,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-petite-terre",
+      "nom": "Excursion à Petite-Terre",
+      "ile": "Mer",
+      "secteur": "Petite-Terre (départ Saint-François)",
+      "type": "mer",
+      "mer": "calme",
+      "niveau": "Intermédiaire",
+      "duree_h": 7,
+      "acces": "Îlet Terre-de-Haut interdit au public.",
+      "points": [
+        {
+          "nom": "Traversée",
+          "lat": 16.2,
+          "lon": -61.18,
+          "alt": 0,
+          "role": "objectif"
+        },
+        {
+          "nom": "Petite-Terre",
+          "lat": 16.17,
+          "lon": -61.12,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-surf-moule",
+      "nom": "Surf au Moule",
+      "ile": "Mer",
+      "secteur": "Le Moule",
+      "type": "mer",
+      "mer": "surf",
+      "houle": [
+        0,
+        120
+      ],
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Le Moule",
+          "lat": 16.345,
+          "lon": -61.33,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-surf-port-louis",
+      "nom": "Surf à Port-Louis",
+      "ile": "Mer",
+      "secteur": "Port-Louis",
+      "type": "mer",
+      "mer": "surf",
+      "houle": [
+        290,
+        40
+      ],
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "conseil": "Fonctionne surtout par houle de nord.",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Port-Louis",
+          "lat": 16.425,
+          "lon": -61.55,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-surf-st-francois",
+      "nom": "Surf à Saint-François",
+      "ile": "Mer",
+      "secteur": "Saint-François",
+      "type": "mer",
+      "mer": "surf",
+      "houle": [
+        30,
+        150
+      ],
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Saint-François",
+          "lat": 16.245,
+          "lon": -61.27,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-kite-bois-jolan",
+      "nom": "Kitesurf / wingfoil à Bois Jolan",
+      "ile": "Mer",
+      "secteur": "Sainte-Anne",
+      "type": "mer",
+      "mer": "kite",
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "conseil": "Alizés réguliers mais légers : grandes ailes.",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Bois Jolan",
+          "lat": 16.215,
+          "lon": -61.36,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mer-kite-st-francois",
+      "nom": "Kitesurf / wingfoil à Saint-François",
+      "ile": "Mer",
+      "secteur": "Saint-François",
+      "type": "mer",
+      "mer": "kite",
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Saint-François lagon",
+          "lat": 16.25,
+          "lon": -61.255,
+          "alt": 0,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "riv-canoe-moustique",
+      "nom": "Descente en canoë de la rivière Moustique",
+      "ile": "Basse-Terre",
+      "secteur": "Nord Basse-Terre (Sainte-Rose)",
+      "type": "riviere",
+      "niveau": "Intermédiaire",
+      "duree_h": 4,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Rivière Moustique (aval)",
+          "lat": 16.305,
+          "lon": -61.665,
+          "alt": 10,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont",
+          "lat": 16.255,
+          "lon": -61.675,
+          "alt": 300,
+          "role": "amont"
         }
       ]
     }
@@ -870,6 +1612,18 @@
       "lat": 16.045,
       "lon": -61.57,
       "alt": 50
+    },
+    "mer_est": {
+      "nom": "Atlantique au large (est)",
+      "lat": 16.25,
+      "lon": -61.05,
+      "alt": 0
+    },
+    "mer_nord": {
+      "nom": "Au nord de la Grande-Terre",
+      "lat": 16.55,
+      "lon": -61.45,
+      "alt": 0
     }
   },
   "webcams": [

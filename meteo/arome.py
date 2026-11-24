@@ -84,9 +84,15 @@ class _Extractor:
         )
         if key not in self._idx_cache:
             ni, nj = eccodes.codes_get(gid, "Ni"), eccodes.codes_get(gid, "Nj")
-            idx, info = [], []
+            idx, info, outside = [], [], []
             for lat, lon in self.points:
-                n = eccodes.codes_grib_find_nearest(gid, lat, lon)[0]
+                try:
+                    n = eccodes.codes_grib_find_nearest(gid, lat, lon)[0]
+                except Exception:  # noqa: BLE001 — point hors du domaine du modèle
+                    idx.append([0] * (2 * NB + 1) ** 2)
+                    info.append(None)
+                    outside.append(len(idx) - 1)
+                    continue
                 c = int(n.index)
                 j, i = divmod(c, ni)
                 row = []
@@ -96,7 +102,7 @@ class _Extractor:
                         row.append(jj * ni + ii if 0 <= jj < nj and 0 <= ii < ni else c)
                 idx.append(row)
                 info.append({"lat": float(n.lat), "lon": float(n.lon), "dist_km": round(float(n.distance), 2)})
-            self._idx_cache[key] = (np.array(idx), info)
+            self._idx_cache[key] = (np.array(idx), info, outside)
         return self._idx_cache[key]
 
     def read(self, path: str) -> tuple[dict, dict]:
@@ -111,10 +117,11 @@ class _Extractor:
                     tlev = eccodes.codes_get(gid, "typeOfLevel")
                     lev = eccodes.codes_get(gid, "level")
                     key = f"{short}|{tlev}|{lev}"
-                    idx, info = self._indices(gid)
+                    idx, info, outside = self._indices(gid)
                     vals = eccodes.codes_get_values(gid)[idx].astype(float)
                     missing = eccodes.codes_get(gid, "missingValue")
                     vals[vals == missing] = np.nan
+                    vals[outside] = np.nan
                     fields[key] = vals
                     meta[key] = {
                         "name": eccodes.codes_get(gid, "name"),
@@ -204,6 +211,7 @@ def to_series(run: datetime, hmax: int, results: dict, inventory: dict, n_points
         "lcc": _pick(inventory, [lambda s, t, l, n: s == "lcc", lambda s, t, l, n: "low cloud" in n]),
         "mcc": _pick(inventory, [lambda s, t, l, n: s == "mcc", lambda s, t, l, n: "medium cloud" in n or "middle cloud" in n]),
         "sp": _pick(inventory, [lambda s, t, l, n: s == "sp", lambda s, t, l, n: n == "surface pressure"]),
+        "ws10": _pick(inventory, [lambda s, t, l, n: s in ("10si", "si10"), lambda s, t, l, n: n == "10 metre wind speed"]),
         "rh": _pick(inventory, [
             lambda s, t, l, n: s in ("2r", "r2"),
             lambda s, t, l, n: s == "r" and t == "heightAboveGround" and l == 2,
@@ -251,6 +259,8 @@ def to_series(run: datetime, hmax: int, results: dict, inventory: dict, n_points
         out["lcc"] = _pct(v)
     if (v := grab(keys["sp"])) is not None:
         out["sp"] = v
+    if (v := grab(keys["ws10"])) is not None:
+        out["ws10"] = v * 3.6
     if (v := grab(keys["mcc"])) is not None:
         out["mcc"] = _pct(v)
     if (v := grab(keys["rh"])) is not None:

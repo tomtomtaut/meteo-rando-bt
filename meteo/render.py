@@ -40,10 +40,13 @@ def chip(r: dict, with_score: bool = True) -> str:
     return f'<span class="chip" style="background:{COLORS.get(lab, "#999")}">{escape(txt)}</span>'
 
 
-CAT_NAMES = {"rando": "Randos", "riviere": "Rivières", "sommet": "Sommets"}
+CAT_NAMES = {"rando": "Randos", "riviere": "Rivières", "sommet": "Sommets",
+             "mer": "Mer calme", "surf": "Surf", "kite": "Kite / wing"}
 
 
 def cat_of(spot: dict) -> str:
+    if spot["type"] == "mer":
+        return {"calme": "mer", "surf": "surf", "kite": "kite"}.get(spot.get("mer"), "mer")
     return "riviere" if spot["type"] == "riviere" else ("sommet" if spot.get("_high") else "rando")
 
 
@@ -54,10 +57,10 @@ def rank_card(spot: dict, r: dict, d: dict, i_day: int) -> str:
     acces = f'<p class="warn">⚠ {escape(spot["acces"])}</p>' if spot.get("acces") else ""
     src = {"AROME": "AROME", "mixte": "AROME + ECMWF", "ECMWF-ens": "tendance ECMWF", "ECMWF": "tendance ECMWF"}
     return f"""
-    <article class="card rk" data-day="{i_day}" data-cat="{cat_of(spot)}" data-score="{score}">
+    <article class="card rk" data-day="{i_day}" data-cat="{cat_of(spot)}" data-ile="{escape(spot.get('ile', ''))}" data-score="{score}">
       <div class="row"><h3>{escape(spot['nom'])}</h3>{chip(r)}</div>
       <p class="when">{escape(d['title'])}{' · ' + when if when else ''}</p>
-      <p class="small muted">{escape(spot['secteur'])} · {escape(CAT_NAMES[cat_of(spot)])} · {escape(spot['niveau'])} · {escape(src.get(r.get('source'), ''))}</p>
+      <p class="small muted">{escape(spot.get('ile', ''))} · {escape(spot['secteur'])} · {escape(CAT_NAMES[cat_of(spot)])} · {escape(spot['niveau'])} · {escape(src.get(r.get('source'), ''))}</p>
       <p>{escape(' · '.join(r.get('reasons', [])))}</p>{acces}
     </article>"""
 
@@ -193,15 +196,22 @@ def page(report: dict) -> str:
     {sommets_block(d)}
   </section>""")
 
-    head_cells = "".join(f"<th>{escape(d['short'])}</th>" for d in report["days"])
+    head_cells = "".join(f'<th class="sortable" data-k="{k}">{escape(d["short"])} ↕</th>'
+                         for k, d in enumerate(report["days"]))
     rows = []
     for i, spot in enumerate(report["spots"]):
-        cells = []
-        for d in report["days"]:
+        cells, attrs = [], []
+        for k, d in enumerate(report["days"]):
             r = d["all"][i][1]
+            sc = -1 if r.get("score") is None else (0 if r.get("nogo") else r["score"])
+            attrs.append(f'data-s{k}="{sc}"')
             start = f"<br><small>{r['start']}</small>" if r.get("start") and not r.get("nogo") else ""
             cells.append(f"<td>{chip(r)}{start}</td>")
-        rows.append(f"<tr><td class='name'>{escape(spot['nom'])}</td>{''.join(cells)}</tr>")
+        rows.append(f'<tr class="tr" data-cat="{cat_of(spot)}" data-ile="{escape(spot.get("ile", ""))}" {" ".join(attrs)}>'
+                    f"<td class='name'>{escape(spot['nom'])}<br><small class='muted'>{escape(spot.get('ile', ''))}"
+                    f" · {escape(CAT_NAMES[cat_of(spot)])}</small></td>{''.join(cells)}</tr>")
+    iles = sorted({s.get("ile", "") for s in report["spots"]}, key=lambda x: (x == "Mer", x))
+    ile_btns = "".join(f'<button class="chip" data-i="{escape(x)}">{escape(x)}</button>' for x in iles)
 
     warn = "".join(f'<p class="bad">{escape(w)}</p>' for w in report["warnings"])
     day_btns = "".join(f'<button class="chip" data-d="{i}">{escape(d["title"].split(" · ")[0])}</button>'
@@ -213,7 +223,7 @@ def page(report: dict) -> str:
     return f"""<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Où sortir en Basse-Terre</title>
+<title>Où sortir en Guadeloupe</title>
 <style>
   :root {{ --bg:#f6f5f1; --fg:#1d1d1b; --muted:#6b6b66; --card:#fff; }}
   @media (prefers-color-scheme: dark) {{ :root {{ --bg:#141413; --fg:#ecebe6; --muted:#9c9b95; --card:#1f1f1d; }} }}
@@ -265,10 +275,12 @@ def page(report: dict) -> str:
     padding:5px 11px; font-size:.85rem; white-space:nowrap; cursor:pointer; font-weight:400; }}
   .bar .chip.on, #views .chip.on {{ background:#1f6f4a; border-color:#1f6f4a; color:#fff; }}
   .nav a {{ color:inherit; }}
+  th.sortable {{ cursor:pointer; white-space:nowrap; }} th.sortable.on {{ color:#1f6f4a; text-decoration:underline; }}
+  tr[hidden] {{ display:none; }}
 </style></head>
 <body><main>
   <p class="nav"><a href="index.html">Carte</a> · <b>Liste</b></p>
-  <h1>Où sortir en Basse-Terre</h1>
+  <h1>Où sortir en Guadeloupe</h1>
   <p class="meta">Rapport du {escape(report['generated'])} · {escape(report['sources'])}</p>
   {warn}
   <div class="bar">
@@ -278,6 +290,7 @@ def page(report: dict) -> str:
     <div class="bar">
       <div class="chips" id="f-day"><button class="chip on" data-d="all">Tous les jours</button>{day_btns}</div>
       <div class="chips" id="f-cat"><button class="chip on" data-c="all">Toutes</button>{cat_btns}</div>
+      <div class="chips" id="f-ile"><button class="chip on" data-i="all">Toutes les îles</button>{ile_btns}</div>
       <label class="small"><input type="checkbox" id="f-hide" checked> masquer « À éviter » et « Non »</label>
     </div>
     <p class="small muted" id="rk-count"></p>
@@ -290,7 +303,12 @@ def page(report: dict) -> str:
   <p class="legend">{legend()}</p>
   {''.join(days_html)}
   <h2>Toutes les activités</h2>
-  <div class="table"><table><tr><th></th>{head_cells}</tr>{''.join(rows)}</table></div>
+  <div class="bar">
+    <div class="chips" id="t-cat"><button class="chip on" data-c="all">Toutes</button>{cat_btns}</div>
+    <div class="chips" id="t-ile"><button class="chip on" data-i="all">Toutes les îles</button>{ile_btns}</div>
+    <p class="small muted">Touche un jour dans l'en-tête du tableau pour trier du mieux noté au moins bien noté.</p>
+  </div>
+  <div class="table"><table id="tbl"><tr><th>Activité</th>{head_cells}</tr>{''.join(rows)}</table></div>
   </div>
   <footer>
     <h2>Comment c'est calculé, et ce qui reste approximatif</h2>
@@ -309,6 +327,13 @@ def page(report: dict) -> str:
     une couche nuageuse plus bas côté au vent. Les niveaux de pression sont espacés de 250 à 500 m : l'altitude exacte
     de la base et du sommet des nuages est approximative. Au-delà d'AROME, l'état est estimé grossièrement
     (humidité vers 1 500 m et nuages bas ECMWF, seuils sévères) : simple tendance.</p>
+    <p><b>Mer.</b> Vagues et houle : Open-Meteo Marine (modèles de vagues Météo-France et ECMWF), cases de 5,5 km.
+    Vent à 10 m : AROME. Mer calme (kayak, snorkeling, plongée, traversée) : creux &lt; 0,6 m et vent &lt; 15 km/h pour
+    un score plein. Surf : houle de 1,2 à 2,5 m, période ≥ 9 s, et orientation de la houle propre à chaque spot.
+    Kite / wing : vent établi de 22 à 45 km/h, sans rafales trop irrégulières. Près des côtes, les baies abritées
+    peuvent être plus calmes que la case ne l'indique.</p>
+    <p><b>Îles plates.</b> Grande-Terre, Marie-Galante, Désirade : pas de pluie de relief ; les averses viennent de
+    l'alizé ou de la chaleur l'après-midi. La chaleur pèse dans le score des sentiers exposés (dès 30 °C).</p>
     <p><b>Situation.</b> Lue sur la colonne d'air en mer à l'est de l'île, dans l'alizé non perturbé : force de l'alizé
     vers 1 000 m, hauteur de la couche humide (cumulus d'alizé), humidité vers 3 000 m, poussières sahariennes (CAMS).
     Les règles d'interprétation (alizé fort = pluie au vent et abri sous le vent ; alizé faible = averses thermiques
@@ -331,7 +356,7 @@ views.forEach(b => b.onclick = () => {{
   document.getElementById("v-jour").hidden = b.dataset.v === "rank";
 }});
 // Filtres et tri du classement
-const f = {{d: "all", c: "all"}};
+const f = {{d: "all", c: "all", i: "all"}};
 function apply() {{
   const hide = document.getElementById("f-hide").checked;
   const list = document.getElementById("rk-list");
@@ -340,7 +365,7 @@ function apply() {{
   let n = 0;
   cards.forEach(c => {{
     const ok = (f.d === "all" || c.dataset.day === f.d) && (f.c === "all" || c.dataset.cat === f.c)
-      && !(hide && +c.dataset.score < 35);
+      && (f.i === "all" || c.dataset.ile === f.i) && !(hide && +c.dataset.score < 35);
     c.hidden = !ok; if (ok) n++;
   }});
   document.getElementById("rk-count").textContent = n + " résultat" + (n > 1 ? "s" : "") + ", du mieux noté au moins bien noté";
@@ -349,8 +374,24 @@ document.querySelectorAll("#f-day .chip").forEach(b => b.onclick = () => {{
   document.querySelectorAll("#f-day .chip").forEach(x => x.classList.toggle("on", x === b)); f.d = b.dataset.d; apply(); }});
 document.querySelectorAll("#f-cat .chip").forEach(b => b.onclick = () => {{
   document.querySelectorAll("#f-cat .chip").forEach(x => x.classList.toggle("on", x === b)); f.c = b.dataset.c; apply(); }});
+document.querySelectorAll("#f-ile .chip").forEach(b => b.onclick = () => {{
+  document.querySelectorAll("#f-ile .chip").forEach(x => x.classList.toggle("on", x === b)); f.i = b.dataset.i; apply(); }});
 document.getElementById("f-hide").onchange = apply;
 apply();
+// Tableau « Toutes les activités » : filtres et tri par jour
+const t = {{c: "all", i: "all", k: null}};
+function applyTable() {{
+  const tbl = document.getElementById("tbl"), rows = [...tbl.querySelectorAll("tr.tr")];
+  if (t.k !== null) rows.sort((a, b) => +b.dataset["s" + t.k] - +a.dataset["s" + t.k]).forEach(r => tbl.appendChild(r));
+  rows.forEach(r => r.hidden = !((t.c === "all" || r.dataset.cat === t.c) && (t.i === "all" || r.dataset.ile === t.i)));
+  tbl.querySelectorAll("th.sortable").forEach(h => h.classList.toggle("on", +h.dataset.k === t.k));
+}}
+document.querySelectorAll("#t-cat .chip").forEach(b => b.onclick = () => {{
+  document.querySelectorAll("#t-cat .chip").forEach(x => x.classList.toggle("on", x === b)); t.c = b.dataset.c; applyTable(); }});
+document.querySelectorAll("#t-ile .chip").forEach(b => b.onclick = () => {{
+  document.querySelectorAll("#t-ile .chip").forEach(x => x.classList.toggle("on", x === b)); t.i = b.dataset.i; applyTable(); }});
+document.querySelectorAll("#tbl th.sortable").forEach(h => h.onclick = () => {{ t.k = +h.dataset.k; applyTable(); }});
+t.k = 0; applyTable();
 // Détail d'une heure sur les barres des sommets (survol ou toucher)
 document.querySelectorAll(".srow").forEach(row => {{
   const line = row.querySelector(".tipline");
