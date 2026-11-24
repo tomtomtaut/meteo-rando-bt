@@ -205,6 +205,11 @@ def page() -> str:
       mais pas sur la côte.</p>
       <p>Lever et coucher sont calculés pour l'altitude du sommet (le soleil s'y lève un peu plus tôt). L'horizon est
       jugé sur les nuages bas et moyens en mer : à l'est au lever, à l'ouest au coucher.</p>
+      <p><b>Heure de départ d'une pépite</b> <span class="b outil">méthode de l'outil</span> : on part de la durée
+      aller-retour de la fiche officielle du Parc national (randoguadeloupe.gp), et on la partage entre montée et
+      descente dans la proportion de la norme DIN 33466 des clubs alpins (300 m de montée par heure, 500 m de
+      descente, 4 km à plat). Départ = heure du lever ou du coucher − temps de montée. Si tu as tes propres temps,
+      on peut les mettre à la place dans spots.json (« montee_min »).</p>
       <p class="piege"><b>Piège.</b> Au-delà d'AROME (cases pâles), l'état est une tendance grossière.</p>"""))
 
     s.append(_sec("vent", "Vent et rafales (km/h, nœuds)", ECHELLE, f"""

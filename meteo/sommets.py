@@ -264,6 +264,8 @@ def day_summary(sommet: dict, i: int, states: dict, merged, d: date, i_east, i_w
         h_mer = next(x["h"] for x in hours if x["state"] == "mer")
         texte.append(f"mer de nuages possible vers {h_mer}h")
     src = {x["src"] for x in hours if x["src"]}
+    for kind, sun, i_h in (("lever", rise, i_east), ("coucher", sset, i_west)):
+        (lever if kind == "lever" else coucher)["fenetre"] = window(sommet, i, states, merged, kind, sun, i_h)
     return {
         "nom": sommet["nom"], "alt": sommet["alt"], "hours": hours, "lever": lever, "coucher": coucher,
         "texte": ", ".join(texte), "source": "AROME" if src == {"AROME"} else ("mixte" if "AROME" in src else "ECMWF"),
@@ -282,3 +284,84 @@ def sun_text(kind: str, sums: list[dict], key: str) -> str:
     for x in sums:
         groups.setdefault(VUE.get(x[key]["etat"], "dégagé"), []).append(x["nom"])
     return f"{kind} {sums[0][key]['heure']} " + " · ".join(f"{v} : {', '.join(n)}" for v, n in groups.items())
+
+
+def montee_min(acces: dict | None) -> int | None:
+    """Temps de montée (min) jusqu'au sommet.
+
+    Depuis la fiche officielle (durée aller-retour, distance, D+) : on garde la durée officielle et on la partage
+    entre montée et descente dans la proportion de la norme DIN 33466 des clubs alpins (300 m/h en montée,
+    500 m/h en descente, 4 km/h à plat ; temps = le plus grand des deux + la moitié du plus petit)."""
+    if not acces:
+        return None
+    if acces.get("montee_min"):
+        return int(acces["montee_min"])
+    f = acces.get("fiche")
+    if not f:
+        return None
+    half_km, d = f["km"] / 2, f["dplus"]
+    din = lambda v, h: max(v, h) + min(v, h) / 2  # noqa: E731
+    up, down = din(d / 300, half_km / 4), din(d / 500, half_km / 4)
+    return int(round(f["duree_h"] * 60 * up / (up + down) / 5) * 5)
+
+
+def _dur(minutes: int) -> str:
+    h, m = divmod(minutes, 60)
+    return f"{h}h{m:02d}" if h else f"{m} min"
+
+
+def window(sommet: dict, i: int, states: dict, merged, kind: str, sun: datetime, i_h) -> dict:
+    """Le créneau d'une pépite : heure de départ, et les conditions heure par heure jusqu'au lever / coucher."""
+    from . import scoring
+    acces = sommet.get("acces") or {}
+    mm = montee_min(acces)
+    sun_loc = sun.astimezone(TZ)
+    dep = (sun - timedelta(minutes=mm)) if mm else None
+    h0 = (dep.astimezone(TZ).hour if dep else max(FIRST_H, sun_loc.hour - 2))
+    h1 = sun_loc.hour + 1
+    lignes = []
+    for h in range(h0, h1 + 1):
+        t = datetime(sun_loc.year, sun_loc.month, sun_loc.day, h, tzinfo=TZ).astimezone(timezone.utc)
+        st = states.get((i, t))
+        ti = merged.index.get(t)
+        if not st or ti is None:
+            continue
+        det = st[1] or {}
+        parts = [f"{h}h : {STATES.get(st[0], (st[0] or '?',))[0].lower()}"]
+        haut = det.get("haut")
+        if haut is not None and not (isinstance(haut, float) and math.isnan(haut)):
+            if haut >= 9000:
+                parts.append("pas de plafond net à la couche")
+            else:
+                ecart = sommet["alt"] - haut
+                parts.append(f"haut des nuages ~{haut:.0f} m, " + (f"sommet {ecart:.0f} m au-dessus" if ecart >= 0
+                             else f"sommet {-ecart:.0f} m en dessous"))
+        rain, _ = scoring.rain_stats(merged, scoring.rain_index(merged, ti), [i], scoring.RAIN_PCTL)
+        parts.append(f"pluie {rain:.1f} mm".replace(".", ","))
+        g = merged.data.get("gust")
+        if g is not None and not math.isnan(g[ti, i]):
+            parts.append(f"rafales {g[ti, i]:.0f} km/h")
+        lignes.append(" · ".join(parts))
+    hz = None
+    t_sun = (sun + timedelta(minutes=30)).replace(minute=0, second=0, microsecond=0)
+    ti = merged.index.get(t_sun)
+    if ti is not None and i_h is not None and "lcc" in merged.data:
+        lcc, mcc = merged.data["lcc"][ti, i_h], merged.data.get("mcc", merged.data["lcc"])[ti, i_h]
+        if not math.isnan(lcc):
+            ok = lcc < HORIZON_LOW and (math.isnan(mcc) or mcc < HORIZON_MID)
+            hz = (f"Horizon {'est' if kind == 'lever' else 'ouest'} en mer : nuages bas {lcc:.0f} %, moyens "
+                  f"{0 if math.isnan(mcc) else mcc:.0f} % → {'dégagé' if ok else 'bouché'} "
+                  f"(seuils de l'outil {HORIZON_LOW} / {HORIZON_MID} %)")
+    if mm:
+        f = acces.get("fiche") or {}
+        src = (f"fiche officielle : {_dur(int(f['duree_h'] * 60))} {f.get('type', '')} ; part de la montée selon "
+               "la norme DIN 33466" if f else "temps renseigné à la main")
+        creneau = (f"Départ du {acces.get('depart', 'parking')} vers {_hm(dep)}, montée ≈ {_dur(mm)} ({src}), "
+                   f"au sommet pour le {kind} à {_hm(sun)}.")
+    else:
+        creneau = (f"Temps de montée non renseigné pour ce sommet (pas de fiche officielle exploitable) : "
+                   f"conditions affichées à partir de {h0}h.")
+    rappel = ("Descente de nuit : frontale indispensable. La charte de la randonnée en Guadeloupe conseille de ne "
+              "pas partir après 15h." if kind == "coucher" else "Montée de nuit : frontale indispensable.")
+    return {"depart": _hm(dep) if dep else None, "montee_min": mm, "creneau": creneau, "lignes": lignes,
+            "horizon": hz, "rappel": rappel, "source": acces.get("source")}

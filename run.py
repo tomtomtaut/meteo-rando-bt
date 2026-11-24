@@ -198,8 +198,12 @@ def main():
     days = []
     for k in range(first, first + 3):
         d = today + timedelta(days=k)
-        nb = now + timedelta(minutes=30) if k == 0 else None
-        all_ = [(s, scoring.evaluate_day(s, merged, d, not_before=nb)) for s in cfg["spots"]]
+        # Aujourd'hui : on calcule aussi les heures déjà passées (affichées, marquées « passé »)
+        all_ = [(s, scoring.evaluate_day(s, merged, d)) for s in cfg["spots"]]
+        if k == 0:
+            for _, r_ in all_:
+                if r_.get("end") and int(r_["end"].rstrip("h")) <= local.hour:
+                    r_["passe"] = True
         for s_, r_ in all_:
             r_["lecture"] = lecture.lines(s_, r_)
         days.append({
@@ -274,7 +278,7 @@ def main():
         "days": [{
             "date": d["date"], "title": d["title"], "couverture": d["couverture"],
             "top": [s["id"] for s, _ in d["top"]],
-            "scores": {s["id"]: {k: r.get(k) for k in ("score", "label", "start", "end", "source", "reasons",
+            "scores": {s["id"]: {k: r.get(k) for k in ("score", "label", "start", "end", "source", "reasons", "passe",
                                                          "detail", "mesures", "lecture")}
                        for s, r in d["all"]},
             "situation": d["situation"], "avis": d["avis"],

@@ -164,7 +164,7 @@ function spotText(sp) {
   const pill = r.score === null || r.score === undefined ? "" :
     `<span class="pill" style="background:${color(r.score)}">${r.label} · ${r.score}</span>`;
   return `<b>${sp.nom}</b> ${pill}<br><span class="muted">${sp.ile} · ${sp.secteur}</span><br>` +
-    (r.start ? `Départ ${r.start} → retour vers ${r.end} · <span class="muted">${SRC[r.source] || r.source || ""}</span><br>` : "") +
+    (r.start ? `Départ ${r.start} → retour vers ${r.end}${r.passe ? " (créneau passé)" : ""} · <span class="muted">${SRC[r.source] || r.source || ""}</span><br>` : "") +
     (r.reasons ? r.reasons.join(" · ") + "<br>" : "") +
     (sp.conseil ? `<span class="muted">${sp.conseil}</span><br>` : "") +
     (sp.acces ? `<span class="warn">⚠ ${sp.acces}</span><br>` : "") +
@@ -229,12 +229,22 @@ function panel() {
   list.forEach(({s, r}, k) => {
     h += `<div class="item" data-id="${s.id}"><div class="row"><span>${k + 1}. ${s.nom}</span>` +
       (r.score !== null && r.score !== undefined ? `<span class="pill" style="background:${color(r.score)}">${r.label} · ${r.score}</span>` : "") +
-      `</div><div class="small muted">${r.start ? "Départ " + r.start + " → " + r.end + " · " : ""}${(r.reasons || []).join(" · ")}</div></div>`;
+      `</div><div class="small muted">${r.start ? "Départ " + r.start + " → " + r.end + (r.passe ? " (passé)" : "") + " · " : ""}${(r.reasons || []).join(" · ")}</div></div>`;
   });
   h += "</div>";
   if (D.pepites && D.pepites.length) {
     h += `<div class="card"><h3>Les pépites (levers et couchers dégagés ou au-dessus des nuages)</h3><ul class="small">`;
-    D.pepites.forEach(p => h += `<li><b>${p.jour}</b> · ${p.texte} <span class="tag ${p.fiable ? "ok" : ""}">${p.fiable ? "AROME" : "tendance, peu fiable"}</span></li>`);
+    D.pepites.forEach(p => {
+      h += `<li><b>${p.jour}</b> · ${p.texte} <span class="tag ${p.fiable ? "ok" : ""}">${p.fiable ? "AROME" : "tendance, peu fiable"}</span>`;
+      if ((p.details || []).length) {
+        h += `<details><summary class="small">Pourquoi et quand y aller</summary>` + p.details.map(x =>
+          `<p class="small"><b>${x.nom}</b> (${x.alt} m)<br>${x.creneau || ""}${x.source ? ` <a href="${x.source}">fiche</a>` : ""}</p>` +
+          `<ul class="small">${(x.lignes || []).map(l => `<li>${l}</li>`).join("")}</ul>` +
+          (x.horizon ? `<p class="small">${x.horizon}${Q("sommet")}</p>` : "")).join("") +
+          `<p class="small muted">${p.details[0].rappel || ""}${p.confiance ? " Confiance du jour : " + p.confiance + "." : ""}${Q("couche")}</p></details>`;
+      }
+      h += `</li>`;
+    });
     h += "</ul></div>";
   }
   if ((D.webcams || []).length) {

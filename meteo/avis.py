@@ -126,8 +126,7 @@ def _mean_at(m: scoring.Merged, key: str, i: int | None, d: date, h0=8, h1=16) -
 
 def day_avis(d: date, now: datetime, m: scoring.Merged, spots: list[dict], top, sit: dict, sommets_day: list,
              raw: dict, idx_h: dict) -> dict:
-    local = now.astimezone(TZ)
-    h0 = max(6, local.hour) if d == local.date() else 6
+    h0 = 6   # journée entière, même les heures passées (demande de Tomas : voir les données quand même)
     bt = [s for s in spots if s.get("ile") == "Basse-Terre" and s["type"] != "mer"]
     cols = sorted({i for s in bt for i in s["_obj"]})
     ch = []
@@ -199,12 +198,14 @@ def day_avis(d: date, now: datetime, m: scoring.Merged, spots: list[dict], top, 
 
     # À retenir : le meilleur de la journée et les sommets au lever / coucher
     retenir = [f"{s['nom']} {r['score']}/100" + (f", {r['start']}-{r['end']}" if r.get("start") else "")
-               for s, r in top]
+               + (" (passé)" if r.get("passe") else "") for s, r in top]
     soleil = []
     for key, nom in (("lever", "lever"), ("coucher", "coucher")):
         clear = [x for x in sommets_day if x[key]["top"]]
         if clear:
-            soleil.append(sun_text(nom, clear, key))
+            deps = [f"{x['nom']} : départ vers {x[key]['fenetre']['depart']}" for x in clear
+                    if (x[key].get("fenetre") or {}).get("depart")]
+            soleil.append(sun_text(nom, clear, key) + (" (" + ", ".join(deps) + ")" if deps else ""))
     # le tableau donne déjà la mer et les poussières : on ne les répète pas dans la lecture
     lect = [t for t in sit.get("texte", []) if not t.startswith(("Mer au large", "Brume de sable"))]
     return {"chiffres": ch, "lecture": lect, "source": sit.get("source"),

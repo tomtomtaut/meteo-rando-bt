@@ -53,7 +53,8 @@ def cat_of(spot: dict) -> str:
 def rank_card(spot: dict, r: dict, d: dict, i_day: int) -> str:
     """Carte du mode Classement (une activité pour un jour), avec ses attributs de filtre."""
     score = -1 if r.get("score") is None else (0 if r.get("nogo") else r["score"])
-    when = (f"Départ {r['start']} → retour vers {r['end']}" if r.get("start") and not r.get("nogo") else "")
+    when = (f"Départ {r['start']} → retour vers {r['end']}" + (" (créneau passé)" if r.get("passe") else "")
+            if r.get("start") and not r.get("nogo") else "")
     acces = f'<p class="warn">⚠ {escape(spot["acces"])}</p>' if spot.get("acces") else ""
     src = {"AROME": "AROME", "mixte": "AROME + ECMWF", "ECMWF-ens": "tendance ECMWF", "ECMWF": "tendance ECMWF"}
     return f"""
@@ -136,7 +137,7 @@ def card(spot: dict, r: dict) -> str:
     return f"""
     <article class="card">
       <div class="row"><h3>{escape(spot['nom'])}</h3>{chip(r)}</div>
-      <p class="when">Départ {r['start']} → retour vers {r['end']} · <span class="muted">{escape(spot['secteur'])}</span></p>
+      <p class="when">Départ {r['start']} → retour vers {r['end']}{' <span class="tag">créneau passé</span>' if r.get('passe') else ''} · <span class="muted">{escape(spot['secteur'])}</span></p>
       <p>{escape(' · '.join(r['reasons']))}</p>{conseil}{acces}{explain(r)}
     </article>"""
 
@@ -187,8 +188,29 @@ def pepites_list(report: dict) -> list[dict]:
             names = [x for x in d.get("sommets", []) if x[key]["top"]]
             if names:
                 out.append({"jour": day, "texte": sun_text(kind.lower(), names, key),
-                            "fiable": any(x[key].get("src") == "AROME" for x in names)})
+                            "fiable": any(x[key].get("src") == "AROME" for x in names),
+                            "confiance": ((d.get("avis") or {}).get("confiance") or {}).get("niveau"),
+                            "details": [{"nom": x["nom"], "alt": x["alt"], **(x[key].get("fenetre") or {})}
+                                        for x in names]})
     return out
+
+
+def pepite_detail(names: list[dict], key: str, d: dict) -> str:
+    """Dépliant d'une pépite : quand partir, et pourquoi (conditions heure par heure)."""
+    conf = ((d.get("avis") or {}).get("confiance") or {}).get("niveau")
+    blocs = []
+    for x in names:
+        f = x[key].get("fenetre") or {}
+        lignes = "".join(f"<li>{escape(l)}</li>" for l in f.get("lignes", []))
+        src = f' <a href="{escape(f["source"])}">fiche</a>' if f.get("source") else ""
+        blocs.append(f"""<p class="small"><b>{escape(x['nom'])}</b> ({x['alt']} m)</p>
+          <p class="small">{escape(f.get('creneau', ''))}{src}</p>
+          <ul class="small">{lignes}</ul>
+          {f'<p class="small">{escape(f["horizon"])}{q("sommet")}</p>' if f.get('horizon') else ''}""")
+    rappel = (names[0][key].get("fenetre") or {}).get("rappel", "")
+    return (f'<details class="expl"><summary>Pourquoi et quand y aller</summary>{"".join(blocs)}'
+            f'<p class="small muted">{escape(rappel)}'
+            f'{" Confiance du jour : " + escape(conf) + "." if conf else ""}{q("couche")}</p></details>')
 
 
 def pepites(report: dict) -> str:
@@ -200,7 +222,8 @@ def pepites(report: dict) -> str:
             if names:
                 tendance = all(x[key].get("src") != "AROME" for x in names)
                 tag = ' <span class="tag">tendance ECMWF, peu fiable</span>' if tendance else ' <span class="tag ok">AROME</span>'
-                items.append(f"<li><b>{day}</b> · {escape(sun_text(kind.lower(), names, key))}{tag}</li>")
+                items.append(f"<li><b>{day}</b> · {escape(sun_text(kind.lower(), names, key))}{tag}"
+                             f"{pepite_detail(names, key, d)}</li>")
         long_clear = [x for x in d.get("sommets", []) if "Dégagé de" in x["texte"]]
         if long_clear and not any(x["lever"]["top"] for x in d.get("sommets", [])):
             x = long_clear[0]
