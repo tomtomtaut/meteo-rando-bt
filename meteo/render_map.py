@@ -107,28 +107,46 @@ function color(s) {
 }
 const labelOf = s => s === null ? "—" : s >= 75 ? "Top" : s >= 55 ? "Bien" : s >= 35 ? "Moyen" : "À éviter";
 
+// Lectures : mêmes échelles que côté calcul (AMS, Beaufort, Douglas, SPC), fournies dans grid.json
+const scale = (name, x) => (G.echelles[name].find(r => x < r[0]) || G.echelles[name].slice(-1)[0]);
+const lPluie = x => x === null ? "" : ` → ${scale("pluie", x)[1]} (AMS)`;
+const lVent = x => { if (x === null) return ""; const r = scale("beaufort", x); return ` → force ${r[1]}, ${r[2]} (Beaufort)`; };
+const lMer = x => { if (x === null) return ""; const r = scale("douglas", x); return ` → mer ${r[2]} (Douglas ${r[1]})`; };
+const lPer = p => p === null ? "" : (p < 8 ? " → houle courte, vagues molles" : p < 11 ? " → houle moyenne" : " → houle longue et puissante");
+function detailScore(i) {
+  const day = G.days[state.day], p = day.pens[state.cat][state.h][i], sc = day.score[state.cat][state.h][i];
+  if (sc === null) return "";
+  if (!p) return `<br><span class="muted">Score = 100, aucune pénalité.</span>`;
+  const parts = Object.entries(p).map(([k, v]) => `${G.pen_labels[k]} −${v}`).join(" − ");
+  return `<br><span class="muted">Score = 100 − ${parts} = ${sc}</span>`;
+}
+
 function cellText(i) {
   const day = G.days[state.day], h = state.h, c = G.cells[i];
   const sc = day.score[state.cat][h][i], R = k => day.raw[k][h][i];
   const src = day.src[h];
   let t = `<b>${CATS[state.cat].label} : ${sc === null ? "—" : sc}/100</b> · ${day.hours[h]}h · ${SRC[src] || "pas de donnée"}<br>`;
-  const rain = `Pluie : ${fmt(R("pluie"))} mm/h` + (R("proba") !== null ? ` · risque d'averse ${R("proba")} %` : "");
+  const rain = `Pluie : ${fmt(R("pluie"))} mm/h${lPluie(R("pluie"))}` +
+    (R("proba") !== null ? ` · risque d'averse ${R("proba")} % (part des scénarios ≥ 0,5 mm/h)` : "");
   const alt = c.alt !== null ? `${c.alt} m` : "inconnu";
   const haut = R("haut_nuages") === 9999 ? "pas de plafond net" : (R("haut_nuages") !== null ? `~${R("haut_nuages")} m` : "—");
   const layer = R("base_nuages") !== null ? `<br>Couche nuageuse d'alizé : base ~${R("base_nuages")} m, haut ${haut}` : "";
   const cloud = R("etat") ? `Relief moyen de la case : ${alt} — à cette hauteur : ${ETAT[R("etat")] || R("etat")}` +
     (R("nuage_case") !== null ? ` (nuage ${R("nuage_case")} %, humidité ${R("hum_case")} %)` : "") + layer : "";
-  const sea = [`Vagues : ${fmt(R("vagues"))} m`, `Houle : ${fmt(R("houle"))} m · ${fmt(R("periode"), 0)} s · de ${R("dir_houle") || "—"}`,
-               `Vent : ${fmt(R("vent"), 0)} km/h (${R("vent") === null ? "—" : Math.round(R("vent") / 1.852)} nœuds) · rafales ${fmt(R("rafales"), 0)} km/h`, rain];
+  const sea = [`Vagues : ${fmt(R("vagues"))} m${lMer(R("vagues"))}`,
+               `Houle : ${fmt(R("houle"))} m · ${fmt(R("periode"), 0)} s · de ${R("dir_houle") || "—"}${lPer(R("periode"))}`,
+               `Vent : ${fmt(R("vent"), 0)} km/h (${R("vent") === null ? "—" : Math.round(R("vent") / 1.852)} nœuds)${lVent(R("vent"))} · rafales ${fmt(R("rafales"), 0)} km/h`, rain];
   const lines = {
     mer: sea, surf: sea, kite: [sea[2], sea[0], rain],
-    rando: [rain, `Rafales : ${fmt(R("rafales"), 0)} km/h`, `Vent : ${fmt(R("vent"), 0)} km/h`,
+    rando: [rain, `Rafales : ${fmt(R("rafales"), 0)} km/h${lVent(R("rafales"))}`, `Vent : ${fmt(R("vent"), 0)} km/h${lVent(R("vent"))}`,
             `Nuages bas : ${fmt(R("nuages_bas"), 0)} %`, cloud],
-    riviere: [`Pluie des 24 h avant : ${fmt(R("pluie24"))} mm (90e percentile, case ±2,5 km)`, rain,
+    riviere: [`Pluie des 24 h avant : ${fmt(R("pluie24"))} mm (90e percentile, case ±2,5 km) → ` +
+              (R("pluie24") === null ? "—" : R("pluie24") < 4 ? "eau basse probable" : R("pluie24") < 10 ? "rivière un peu grossie" :
+               R("pluie24") < 25 ? "rivière grosse, prudence" : "crue possible : ne pas s'engager") + " (seuils de l'outil 4 / 10 / 25 mm)", rain,
               `Rafales : ${fmt(R("rafales"), 0)} km/h`],
-    sommet: [cloud, rain, `Nuages bas : ${fmt(R("nuages_bas"), 0)} %`, `Rafales : ${fmt(R("rafales"), 0)} km/h`],
+    sommet: [cloud, rain, `Nuages bas : ${fmt(R("nuages_bas"), 0)} %`, `Rafales : ${fmt(R("rafales"), 0)} km/h${lVent(R("rafales"))}`],
   }[state.cat].filter(Boolean);
-  return t + lines.join("<br>") + `<br><span class="muted">${c.ile || "En mer"} · case ${fmt(c.lat, 3)}, ${fmt(c.lon, 3)}` +
+  return t + lines.join("<br>") + detailScore(i) + `<br><span class="muted">${c.ile || "En mer"} · case ${fmt(c.lat, 3)}, ${fmt(c.lon, 3)}` +
     ` (${c.kind === "mer" ? "5,5 km, modèle de vagues" : "maille AROME 2,5 km"})</span>`;
 }
 
@@ -140,7 +158,13 @@ function spotText(sp) {
     (r.start ? `Départ ${r.start} → retour vers ${r.end} · <span class="muted">${SRC[r.source] || r.source || ""}</span><br>` : "") +
     (r.reasons ? r.reasons.join(" · ") + "<br>" : "") +
     (sp.conseil ? `<span class="muted">${sp.conseil}</span><br>` : "") +
-    (sp.acces ? `<span class="warn">⚠ ${sp.acces}</span>` : "");
+    (sp.acces ? `<span class="warn">⚠ ${sp.acces}</span><br>` : "") +
+    (r.lecture && r.lecture.length ? `<b>Chiffres et lecture</b><ul class="small">${r.lecture.map(x => `<li>${x}</li>`).join("")}</ul>` : "") +
+    (r.detail ? `<b>Calcul</b><br><span class="small">Créneau = 0,6 × moyenne (${r.detail.moyenne}) + 0,4 × pire heure ` +
+      `(${r.detail.pire_h}h : ${r.detail.pire}) = ${r.detail.creneau}` +
+      r.detail.ajustements.map(a => `<br>${a.raison} ${a.points === null ? "→ 0" : a.points}`).join("") +
+      `<br>Pénalités moyennes : ${Object.entries(r.detail.pens_moy).map(([k, v]) => k + " −" + v).join(", ") || "aucune"}` +
+      `<br>Score final : <b>${r.detail.final}</b></span>` : "");
 }
 
 function draw() {
@@ -224,7 +248,7 @@ Promise.all([fetch("grid.json", {cache: "no-store"}).then(r => r.json()),
   });
   d.spots.forEach(sp => {
     const m = L.circleMarker([sp.lat, sp.lon], {radius: 8, weight: 2, color: "#fff", fillOpacity: 1});
-    m.bindPopup(() => spotText(sp));
+    m.bindPopup(() => spotText(sp), {maxWidth: 320, maxHeight: 380});
     markers.push({m, sp});
   });
   (d.webcams || []).filter(w => w.lat && w.lon).forEach(w => {

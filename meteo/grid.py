@@ -148,6 +148,7 @@ def compute(merged, cell_idx: list[int], cell_alts: list[float], days: list[date
     for d in days:
         day = {"date": d.isoformat(), "hours": HOURS, "src": [],
                "score": {k: [] for k in LAYERS},
+               "pens": {k: [] for k in LAYERS},
                "raw": {k: [] for k in ("pluie", "proba", "nuages_bas", "nuage_case", "hum_case", "etat",
                                        "rafales", "pluie24", "vagues", "houle", "periode", "dir_houle", "vent",
                                        "base_nuages", "haut_nuages")}}
@@ -156,11 +157,13 @@ def compute(merged, cell_idx: list[int], cell_alts: list[float], days: list[date
             ti = merged.index.get(t)
             day["src"].append(merged.source[ti] if ti is not None else None)
             sc = {k: [] for k in day["score"]}
+            pn = {k: [] for k in day["score"]}
             raw = {k: [] for k in day["raw"]}
             for n, i in enumerate(cell_idx):
                 if ti is None:
                     for k in sc:
                         sc[k].append(None)
+                        pn[k].append(None)
                     for k in raw:
                         raw[k].append(None)
                     continue
@@ -169,8 +172,10 @@ def compute(merged, cell_idx: list[int], cell_alts: list[float], days: list[date
                     for lay in ("mer", "surf", "kite"):
                         sc_m, e_m = scoring.hour_eval(spots[lay][n], merged, ti)
                         sc[lay].append(None if sc_m is None else round(sc_m))
+                        pn[lay].append(e_m.get("pens") or None)
                     for lay in ("rando", "riviere", "sommet"):
                         sc[lay].append(None)
+                        pn[lay].append(None)
                     for k in raw:
                         raw[k].append(None)
                     raw["pluie"][-1] = _r(e_m["rain"])
@@ -184,19 +189,29 @@ def compute(merged, cell_idx: list[int], cell_alts: list[float], days: list[date
                     continue
                 for lay in ("mer", "surf", "kite"):
                     sc[lay].append(None)
+                    pn[lay].append(None)
                 s_r, e_r = scoring.hour_eval(spots["rando"][n], merged, ti)
-                s_s, _ = scoring.hour_eval(spots["sommet"][n], merged, ti)
+                s_s, e_s = scoring.hour_eval(spots["sommet"][n], merged, ti)
                 # rivière : pluie des 24 h précédentes et de l'heure, sur la case et ses voisines (90e percentile)
                 p24 = sum(r90(merged.index[t - timedelta(hours=k)], i)
                           for k in range(0, 24) if (t - timedelta(hours=k)) in merged.index)
+                pv = dict(e_r.get("pens") or {})
                 if p24 >= scoring.RIVER_NOGO_24H or r90(scoring.rain_index(merged, ti), i) >= scoring.RIVER_NOGO_RATE:
                     s_v = 0.0
+                    pv["a"] = 100
                 else:
-                    s_v = s_r - (35 if p24 >= scoring.RIVER_BAD_24H else 15 if p24 >= scoring.RIVER_MEH_24H else 0)
-                    s_v -= 25 if e_r["storm"] else 0
+                    a = 35 if p24 >= scoring.RIVER_BAD_24H else 15 if p24 >= scoring.RIVER_MEH_24H else 0
+                    s_v = s_r - a - (25 if e_r["storm"] else 0)
+                    if a:
+                        pv["a"] = a
+                    if e_r["storm"]:
+                        pv["o"] = pv.get("o", 0) + 25
                 sc["rando"].append(round(s_r))
                 sc["sommet"].append(round(s_s))
                 sc["riviere"].append(round(max(0.0, s_v)))
+                pn["rando"].append(e_r.get("pens") or None)
+                pn["sommet"].append(e_s.get("pens") or None)
+                pn["riviere"].append(pv or None)
                 st = merged.summit_state.get((i, t))
                 det = st[1] if st else {}
                 lcc = merged.data["lcc"][ti, i] if "lcc" in merged.data else float("nan")
@@ -216,6 +231,7 @@ def compute(merged, cell_idx: list[int], cell_alts: list[float], days: list[date
                 raw["vent"].append(_r(ws, 0))
             for k in sc:
                 day["score"][k].append(sc[k])
+                day["pens"][k].append(pn[k])
             for k in raw:
                 day["raw"][k].append(raw[k])
         out.append(day)

@@ -149,40 +149,57 @@ def rain_index(m: Merged, ti: int) -> int:
     return ti + 1 if ti + 1 < len(m.times) else ti
 
 
+PEN_LABELS = {
+    "p": "pluie", "o": "orage possible", "n": "nuage sur le parcours", "r": "rafales", "c": "chaleur",
+    "v": "vent", "m": "état de la mer", "h": "taille de la houle", "t": "période de la houle",
+    "d": "orientation de la houle", "k": "rafales irrégulières", "a": "pluie en amont (24 h)",
+}
+
+
 def hour_eval(spot: dict, m: Merged, ti: int) -> tuple[float | None, dict]:
-    """Conditions pour l'heure qui commence à m.times[ti]."""
+    """Conditions pour l'heure qui commence à m.times[ti].
+
+    Renvoie (score, infos) ; infos["pens"] détaille chaque pénalité (clé courte -> points retirés)."""
     obj = spot["_obj"]
     rain, prob = rain_stats(m, rain_index(m, ti), obj, RAIN_PCTL)
+    gust, cape = _max(m, "gust", ti, obj), _max(m, "cape", ti, obj)
+    storm = _nz(cape) >= CAPE_UNSTABLE and (rain >= RAIN_WET or (prob or 0) >= 0.3)
     if spot["type"] == "mer":
         from . import mer
-        gust, cape = _max(m, "gust", ti, obj), _max(m, "cape", ti, obj)
-        storm = _nz(cape) >= CAPE_UNSTABLE and (rain >= RAIN_WET or (prob or 0) >= 0.3)
         score, sea = mer.hour_eval(spot, m, ti, rain, prob, storm, gust)
         return score, {"rain": rain, "prob": prob, "in_cloud": False, "gust": gust, "storm": storm,
-                       "t2m": float("nan"), **sea}
+                       "cape": cape, "t2m": float("nan"), **sea}
     lcc, rh = _max(m, "lcc", ti, obj), _max(m, "rh", ti, obj)
-    gust, cape, t2m = _max(m, "gust", ti, obj), _max(m, "cape", ti, obj), _max(m, "t2m", ti, obj)
-    pen = _lookup(RAIN_PENALTY, rain)
+    t2m = _max(m, "t2m", ti, obj)
+    pens = {}
+    if (p := _lookup(RAIN_PENALTY, rain)):
+        pens["p"] = p
     in_cloud = False
     if spot["_high"]:
         sts = [m.summit_state.get((i, m.times[ti])) for i in spot.get("_obj_high", [])]
         sts = [x[0] for x in sts if x and x[0]]
-        if sts:  # état déduit du profil vertical à l'altitude réelle du sommet
+        if sts:  # état déduit de la couche nuageuse et du profil vertical, à l'altitude réelle
             in_cloud = "nuage" in sts
-            pen += 25 if in_cloud else (10 if "incertain" in sts else 0)
+            n = 25 if in_cloud else (10 if "incertain" in sts else 0)
         else:    # repli : champs de surface
             in_cloud = _nz(lcc) >= CLOUD_FULL or _nz(rh) >= RH_FOG
-            pen += 25 if in_cloud else (10 if _nz(lcc) >= CLOUD_PARTIAL else 0)
-        pen += _lookup(GUST_SUMMIT, _nz(gust))
-    else:
-        pen += _lookup(GUST_OTHER, _nz(gust))
-    storm = _nz(cape) >= CAPE_UNSTABLE and (rain >= RAIN_WET or (prob or 0) >= 0.3)
+            n = 25 if in_cloud else (10 if _nz(lcc) >= CLOUD_PARTIAL else 0)
+        if n:
+            pens["n"] = n
+        if (g := _lookup(GUST_SUMMIT, _nz(gust))):
+            pens["r"] = g
+    elif (g := _lookup(GUST_OTHER, _nz(gust))):
+        pens["r"] = g
     if storm:
-        pen += 15
+        pens["o"] = 15
     if spot["type"] == "littoral" or spot.get("expose"):
-        pen += 20 if _nz(t2m) >= HOT + 1 else (10 if _nz(t2m) >= HOT - 1 else 0)
-    return max(0.0, 100.0 - pen), {"rain": rain, "prob": prob, "in_cloud": in_cloud, "gust": gust,
-                                   "storm": storm, "t2m": t2m}
+        c = 20 if _nz(t2m) >= HOT + 1 else (10 if _nz(t2m) >= HOT - 1 else 0)
+        if c:
+            pens["c"] = c
+    score = max(0.0, 100.0 - sum(pens.values()))
+    ws = _max(m, "ws10", ti, obj)
+    return score, {"rain": rain, "prob": prob, "in_cloud": in_cloud, "gust": gust, "storm": storm,
+                   "cape": cape, "t2m": t2m, "lcc": lcc, "ws": ws, "pens": pens}
 
 
 def _river_rain(spot: dict, m: Merged, ti: int) -> float:
@@ -203,35 +220,46 @@ def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None =
         if any(e[0] is None for e in evals):
             continue
         scores = [e[0] for e in evals]
-        score = 0.6 * float(np.mean(scores)) + 0.4 * min(scores)
-        nogo, reasons = False, []
+        mean_s, min_s = float(np.mean(scores)), min(scores)
+        score = 0.6 * mean_s + 0.4 * min_s
+        base_score = score
+        nogo, reasons, ajust = False, [], []
+        p24 = up_sum = None
 
         rain_win = sum(e[1]["rain"] for e in evals)
         if spot["type"] == "riviere" or spot.get("riviere_partielle"):
             before = [m.index.get(t0 - timedelta(hours=k)) for k in range(0, 24)]  # cumuls de t0-24h à t0
             p24 = sum(_river_rain(spot, m, ti) for ti in before if ti is not None)
             up_win = [_river_rain(spot, m, rain_index(m, ti)) for ti in tis]
+            up_sum = sum(up_win)
             if spot["type"] == "riviere":
                 if p24 >= RIVER_NOGO_24H:
                     nogo = True
                     reasons.append(f"Trop de pluie en amont : {p24:.0f} mm sur 24 h")
+                    ajust.append((f"pluie en amont ≥ {RIVER_NOGO_24H} mm sur 24 h : sortie déconseillée", None))
                 elif max(up_win) >= RIVER_NOGO_RATE or sum(up_win) >= RIVER_NOGO_WINDOW:
                     nogo = True
                     reasons.append(f"Pluie en amont pendant la sortie ({sum(up_win):.0f} mm) : risque de montée des eaux")
+                    ajust.append(("pluie en amont pendant la sortie : risque de montée des eaux", None))
                 else:
                     if p24 >= RIVER_BAD_24H:
                         score -= 35
+                        ajust.append((f"amont {p24:.1f} mm sur 24 h (≥ {RIVER_BAD_24H})".replace(".", ","), -35))
                     elif p24 >= RIVER_MEH_24H:
                         score -= 15
+                        ajust.append((f"amont {p24:.1f} mm sur 24 h (≥ {RIVER_MEH_24H})".replace(".", ","), -15))
                     reasons.append(f"Amont : {p24:.0f} mm sur les 24 h avant")
                 if any(e[1]["storm"] for e in evals):
                     score -= 25
+                    ajust.append(("orage possible en rivière", -25))
             else:
                 if p24 >= 30:
                     score -= 30
+                    ajust.append((f"rivières à traverser : {p24:.0f} mm en amont sur 24 h", -30))
                     reasons.append(f"Rivières à traverser probablement grosses ({p24:.0f} mm en 24 h)")
                 if max(up_win) >= RIVER_NOGO_RATE:
                     score -= 20
+                    ajust.append(("averse forte en amont pendant la sortie", -20))
 
         span = f"de {start}h à {start + dur}h"
         if rain_win < 0.3:
@@ -259,6 +287,39 @@ def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None =
             reasons += mer.reasons(spot, [e[1] for e in evals])
 
         score = 0.0 if nogo else max(0.0, min(100.0, score))
+        k_worst = int(np.argmin(scores))
+        pens_mean = {}
+        for e in evals:
+            for k, v in (e[1].get("pens") or {}).items():
+                pens_mean[k] = pens_mean.get(k, 0) + v / dur
+        detail = {
+            "heures": [{"h": start + k, "score": round(sc), "pens": e[1].get("pens", {})}
+                       for k, (sc, e) in enumerate(zip(scores, evals))],
+            "moyenne": round(mean_s), "pire_h": start + k_worst, "pire": round(min_s),
+            "pens_moy": {PEN_LABELS[k]: round(v, 1) for k, v in sorted(pens_mean.items(), key=lambda x: -x[1])},
+            "pens_pire": {PEN_LABELS[k]: v for k, v in (evals[k_worst][1].get("pens") or {}).items()},
+            "creneau": round(base_score),
+            "ajustements": [{"raison": r, "points": v} for r, v in ajust],
+            "final": round(score),
+        }
+        e1 = [e[1] for e in evals]
+        mx = lambda k: max((_nz(x.get(k, float("nan"))) for x in e1), default=0.0)  # noqa: E731
+        mean = lambda k: float(np.nanmean([x.get(k, float("nan")) for x in e1])) if any(  # noqa: E731
+            not math.isnan(x.get(k, float("nan"))) for x in e1) else float("nan")
+        probs_all = [x["prob"] for x in e1 if x.get("prob") is not None]
+        mesures = {
+            "pluie_creneau": round(rain_win, 1), "pluie_max_h": round(mx("rain"), 1),
+            "proba_max": None if not probs_all else round(max(probs_all) * 100),
+            "rafales_max": round(mx("gust")), "vent_moy": None if math.isnan(mean("ws")) else round(mean("ws")),
+            "temp_max": None if math.isnan(mean("t2m")) else round(mx("t2m")),
+            "cape_max": round(mx("cape")),
+            "pluie_amont_24h": None if p24 is None else round(p24, 1),
+            "pluie_amont_sortie": None if up_sum is None else round(up_sum, 1),
+        }
+        if spot["type"] == "mer":
+            for k, nk in (("hs", "vagues"), ("sw", "houle"), ("per", "periode"), ("dir", "dir_houle")):
+                v = mean(k)
+                mesures[nk] = None if math.isnan(v) else round(v, 1)
         arome_share = sum(m.source[ti] == "AROME" for ti in tis) / dur
         ens_share = sum(m.source[ti] == "ECMWF-ens" for ti in tis) / dur
         cand = {
@@ -270,6 +331,8 @@ def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None =
             "source": "AROME" if arome_share >= 0.9 else ("mixte" if arome_share > 0 else
                                                           ("ECMWF-ens" if ens_share >= 0.5 else "ECMWF")),
             "hourly": [round(s) for s in scores],
+            "detail": detail,
+            "mesures": mesures,
         }
         if best is None or cand["score"] > best["score"]:
             best = cand

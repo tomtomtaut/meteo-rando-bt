@@ -61,8 +61,38 @@ def rank_card(spot: dict, r: dict, d: dict, i_day: int) -> str:
       <div class="row"><h3>{escape(spot['nom'])}</h3>{chip(r)}</div>
       <p class="when">{escape(d['title'])}{' · ' + when if when else ''}</p>
       <p class="small muted">{escape(spot.get('ile', ''))} · {escape(spot['secteur'])} · {escape(CAT_NAMES[cat_of(spot)])} · {escape(spot['niveau'])} · {escape(src.get(r.get('source'), ''))}</p>
-      <p>{escape(' · '.join(r.get('reasons', [])))}</p>{acces}
+      <p>{escape(' · '.join(r.get('reasons', [])))}</p>{acces}{explain(r)}
     </article>"""
+
+
+def explain(r: dict) -> str:
+    """Bloc dépliable : chiffres clés avec leur lecture, puis détail du calcul du score."""
+    d = r.get("detail")
+    if not d:
+        return ""
+    fmt = lambda pens: ", ".join(f"{k} −{v:g}" for k, v in pens.items()) or "aucune"  # noqa: E731
+    heures = " · ".join(
+        f"{h['h']}h {h['score']}" + (" (" + ", ".join(f"{k}{v:g}" for k, v in h["pens"].items()) + ")" if h["pens"] else "")
+        for h in d["heures"])
+    aj = "".join(f"<li>{escape(a['raison'])}" + (f" : {a['points']:+g}" if a["points"] is not None else " → score 0")
+                 + "</li>" for a in d["ajustements"])
+    lect = "".join(f"<li>{escape(x)}</li>" for x in r.get("lecture", []))
+    return f"""
+      <details class="expl"><summary>Chiffres, lecture et détail du score</summary>
+        {f'<p class="small"><b>Chiffres clés et ce qu’ils veulent dire</b></p><ul class="small">{lect}</ul>' if lect else ''}
+        <p class="small"><b>Calcul du score</b></p>
+        <ul class="small">
+          <li>Chaque heure part de 100, moins des pénalités. Heure par heure : {escape(heures)}
+            <span class="muted">(p = pluie, n = nuage, r = rafales, o = orage, c = chaleur, v = vent, m = mer,
+            h = houle, t = période, d = orientation, k = rafales irrégulières)</span></li>
+          <li>Pénalités moyennes par heure : {escape(fmt(d['pens_moy']))}</li>
+          <li>Heure la plus mauvaise ({d['pire_h']}h, {d['pire']}) : {escape(fmt(d['pens_pire']))}</li>
+          <li>Créneau = 0,6 × moyenne des heures ({d['moyenne']}) + 0,4 × heure la plus mauvaise ({d['pire']})
+            = <b>{d['creneau']}</b></li>
+          {aj}
+          <li>Score final : <b>{d['final']}</b></li>
+        </ul>
+      </details>"""
 
 
 def card(spot: dict, r: dict) -> str:
@@ -72,7 +102,7 @@ def card(spot: dict, r: dict) -> str:
     <article class="card">
       <div class="row"><h3>{escape(spot['nom'])}</h3>{chip(r)}</div>
       <p class="when">Départ {r['start']} → retour vers {r['end']} · <span class="muted">{escape(spot['secteur'])}</span></p>
-      <p>{escape(' · '.join(r['reasons']))}</p>{conseil}{acces}
+      <p>{escape(' · '.join(r['reasons']))}</p>{conseil}{acces}{explain(r)}
     </article>"""
 
 
@@ -280,6 +310,8 @@ def page(report: dict) -> str:
   .nav a {{ color:inherit; }}
   th.sortable {{ cursor:pointer; white-space:nowrap; }} th.sortable.on {{ color:#1f6f4a; text-decoration:underline; }}
   tr[hidden] {{ display:none; }}
+  .expl {{ margin-top:6px; }} .expl summary {{ color:#1f6f4a; font-size:.85rem; }}
+  .expl ul {{ padding-left:1.1em; margin:.3em 0; }} .expl li {{ margin:.25em 0; }}
 </style></head>
 <body><main>
   <p class="nav"><a href="index.html">Carte</a> · <b>Liste</b></p>

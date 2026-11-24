@@ -48,24 +48,27 @@ def hour_eval(spot: dict, m, ti: int, rain: float, prob, storm: bool, gust: floa
     hs, sw, per, d = (_get(m, k, ti, cols) for k in ("hs", "sw", "per", "dir"))
     ws = _get(m, "ws10", ti, cols)
     kind = spot.get("mer", "calme")
-    pen = _lookup(RAIN_PENALTY, rain) * 0.5 + (25 if storm else 0)
+    pens = {"p": round(_lookup(RAIN_PENALTY, rain) * 0.5), "o": 25 if storm else 0}
     nodata = all(math.isnan(x) for x in (hs, ws))
     if kind == "calme":
-        pen += _lk(WAVE_CALM, 0 if math.isnan(hs) else hs) + _lk(WIND_CALM, 0 if math.isnan(ws) else ws)
+        pens["m"] = _lk(WAVE_CALM, 0 if math.isnan(hs) else hs)
+        pens["v"] = _lk(WIND_CALM, 0 if math.isnan(ws) else ws)
     elif kind == "surf":
-        pen += _lk(SWELL_SURF, 0 if math.isnan(sw) else sw) + _lk(PERIOD_SURF, 0 if math.isnan(per) else per)
+        pens["h"] = _lk(SWELL_SURF, 0 if math.isnan(sw) else sw)
+        pens["t"] = _lk(PERIOD_SURF, 0 if math.isnan(per) else per)
         if spot.get("houle") and not math.isnan(d) and not _in_range(d, spot["houle"]):
-            pen += 40
+            pens["d"] = 40
         if not math.isnan(ws) and ws > 35:
-            pen += 20
+            pens["v"] = 20
         nodata = math.isnan(sw)
     elif kind == "kite":
-        pen += _lk(WIND_KITE, 0 if math.isnan(ws) else ws)
+        pens["v"] = _lk(WIND_KITE, 0 if math.isnan(ws) else ws)
         if not math.isnan(gust) and not math.isnan(ws) and gust - ws > 20:
-            pen += 15
+            pens["k"] = 15
         nodata = math.isnan(ws)
-    score = None if nodata else max(0.0, 100.0 - pen)
-    return score, {"hs": hs, "sw": sw, "per": per, "dir": d, "ws": ws}
+    pens = {k: v for k, v in pens.items() if v}
+    score = None if nodata else max(0.0, 100.0 - sum(pens.values()))
+    return score, {"hs": hs, "sw": sw, "per": per, "dir": d, "ws": ws, "pens": pens}
 
 
 def reasons(spot: dict, evals: list[dict]) -> list[str]:

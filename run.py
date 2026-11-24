@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from meteo import arome, ecmwf, grid, marine, render, render_map, scoring, situation, sommets, webcams
+from meteo import arome, ecmwf, grid, lecture, marine, render, render_map, scoring, situation, sommets, webcams
 
 log = logging.getLogger("rapport")
 ROOT = Path(__file__).parent
@@ -200,6 +200,8 @@ def main():
         d = today + timedelta(days=k)
         nb = now + timedelta(minutes=30) if k == 0 else None
         all_ = [(s, scoring.evaluate_day(s, merged, d, not_before=nb)) for s in cfg["spots"]]
+        for s_, r_ in all_:
+            r_["lecture"] = lecture.lines(s_, r_)
         days.append({
             "date": d.isoformat(),
             "title": f"{names[k]} · {render.fdate(d)}",
@@ -219,6 +221,8 @@ def main():
                            "alt": None if (np.isnan(a) or c["kind"] == "mer") else round(a)}
                           for c, a in zip(grid_cells, grid_alts)]
     grid_data["step"] = grid.STEP
+    grid_data["echelles"] = lecture.scales()
+    grid_data["pen_labels"] = scoring.PEN_LABELS
     # Contrôles de cohérence des dates et heures (heure de Guadeloupe) : visibles dans debug.json
     controles = []
     for d in days:
@@ -267,7 +271,8 @@ def main():
         "days": [{
             "date": d["date"], "title": d["title"], "couverture": d["couverture"],
             "top": [s["id"] for s, _ in d["top"]],
-            "scores": {s["id"]: {k: r.get(k) for k in ("score", "label", "start", "end", "source", "reasons")}
+            "scores": {s["id"]: {k: r.get(k) for k in ("score", "label", "start", "end", "source", "reasons",
+                                                         "detail", "mesures", "lecture")}
                        for s, r in d["all"]},
             "situation": d["situation"],
             "sommets": {x["nom"]: {"etats": {h["h"]: h["state"] for h in x["hours"]},
