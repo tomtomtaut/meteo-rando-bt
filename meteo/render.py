@@ -65,6 +65,40 @@ def rank_card(spot: dict, r: dict, d: dict, i_day: int) -> str:
     </article>"""
 
 
+def q(aide: str | None) -> str:
+    """Petit lien « ? » vers la section de la page Apprendre à lire."""
+    return f' <a class="q" href="apprendre.html#{aide}" title="Comment lire ce chiffre">?</a>' if aide else ""
+
+
+CONF_COL = {"élevée": "#1f9d55", "moyenne": "#f0a500", "faible": "#b3261e"}
+
+
+def avis_html(a: dict | None) -> str:
+    if not a:
+        return ""
+    conf = a.get("confiance") or {}
+    niv = conf.get("niveau")
+    badge = (f'<span class="chip" style="background:{CONF_COL.get(niv, "#999")}">Confiance {escape(niv)}</span>'
+             if niv else '<span class="muted small">confiance non évaluée</span>')
+    rows = "".join(f"<tr><td>{escape(c['label'])}</td><td><b>{escape(c['valeur'])}</b><br>"
+                   f"<span class='muted'>→ {escape(c['lecture'])}</span>{q(c.get('aide'))}</td></tr>"
+                   for c in a.get("chiffres", []))
+    src = "profils AROME" if a.get("source") == "AROME" else "ECMWF, sans profil fin"
+    lect = "".join(f"<li>{escape(t)}</li>" for t in a.get("lecture", []))
+    ret = " · ".join(escape(x) for x in a.get("retenir", []))
+    sol = " · ".join(escape(x) for x in a.get("soleil", []))
+    lignes = "".join(f"<li>{escape(x['t'])}{q(x.get('aide'))}</li>" for x in conf.get("lignes", []))
+    return f"""
+    <div class="avis">
+      <div class="row"><b>L'avis du jour</b>{badge}</div>
+      <table class="kv">{rows}</table>
+      {f'<p class="small"><b>Ce qu’en lirait un prévisionniste</b> <span class="muted">({src}, 6h-16h)</span>{q("alize")}</p><ul class="small">{lect}</ul>' if lect else ''}
+      {f'<p class="small"><b>À retenir :</b> {ret}</p>' if ret else ''}
+      {f'<p class="small"><b>Sommets :</b> {sol}{q("sommet")}</p>' if sol else ''}
+      {f'<details><summary>Pourquoi cette confiance ?</summary><ul class="small">{lignes}</ul></details>' if lignes else ''}
+    </div>"""
+
+
 def explain(r: dict) -> str:
     """Bloc dépliable : chiffres clés avec leur lecture, puis détail du calcul du score."""
     d = r.get("detail")
@@ -76,11 +110,12 @@ def explain(r: dict) -> str:
         for h in d["heures"])
     aj = "".join(f"<li>{escape(a['raison'])}" + (f" : {a['points']:+g}" if a["points"] is not None else " → score 0")
                  + "</li>" for a in d["ajustements"])
-    lect = "".join(f"<li>{escape(x)}</li>" for x in r.get("lecture", []))
+    lect = "".join(f"<li>{escape(x['t'] if isinstance(x, dict) else x)}"
+                   f"{q(x.get('aide') if isinstance(x, dict) else None)}</li>" for x in r.get("lecture", []))
     return f"""
       <details class="expl"><summary>Chiffres, lecture et détail du score</summary>
         {f'<p class="small"><b>Chiffres clés et ce qu’ils veulent dire</b></p><ul class="small">{lect}</ul>' if lect else ''}
-        <p class="small"><b>Calcul du score</b></p>
+        <p class="small"><b>Calcul du score</b>{q("score")}</p>
         <ul class="small">
           <li>Chaque heure part de 100, moins des pénalités. Heure par heure : {escape(heures)}
             <span class="muted">(p = pluie, n = nuage, r = rafales, o = orage, c = chaleur, v = vent, m = mer,
@@ -212,12 +247,7 @@ def page(report: dict) -> str:
         bad_html = "".join(
             f"<li><b>{escape(s['nom'])}</b> {chip(r, False)} — {escape(' · '.join(r['reasons']))}</li>" for s, r in bad
         )
-        sit = d.get("situation") or {}
-        sit_html = ""
-        if sit.get("texte"):
-            src_sit = "profils AROME" if sit.get("source") == "AROME" else "ECMWF, sans profil fin"
-            sit_html = (f'<div class="sit"><b>Situation</b> <span class="muted">({src_sit}, 6h-16h)</span>'
-                        f'<ul>{"".join(f"<li>{escape(t)}</li>" for t in sit["texte"])}</ul></div>')
+        sit_html = avis_html(d.get("avis"))
         days_html.append(f"""
   <section>
     <h2>{escape(d['title'])}</h2>
@@ -310,11 +340,18 @@ def page(report: dict) -> str:
   .nav a {{ color:inherit; }}
   th.sortable {{ cursor:pointer; white-space:nowrap; }} th.sortable.on {{ color:#1f6f4a; text-decoration:underline; }}
   tr[hidden] {{ display:none; }}
+  .q {{ display:inline-block; width:1.15em; height:1.15em; line-height:1.15em; text-align:center; border-radius:50%;
+    border:1px solid currentColor; color:#1f6f4a; font-size:.72rem; font-weight:700; text-decoration:none; margin-left:3px; }}
+  .avis {{ background:var(--card); border-radius:12px; padding:10px 14px; margin:8px 0; border-left:4px solid #1f6f4a; }}
+  .avis .row {{ align-items:center; }}
+  .kv {{ width:100%; font-size:.86rem; margin:.4em 0; }}
+  .kv td {{ text-align:left; padding:5px 4px; }} .kv td:first-child {{ width:34%; color:var(--muted); }}
+  .avis ul {{ margin:.2em 0; padding-left:1.1em; }}
   .expl {{ margin-top:6px; }} .expl summary {{ color:#1f6f4a; font-size:.85rem; }}
   .expl ul {{ padding-left:1.1em; margin:.3em 0; }} .expl li {{ margin:.25em 0; }}
 </style></head>
 <body><main>
-  <p class="nav"><a href="index.html">Carte</a> · <b>Liste</b></p>
+  <p class="nav"><a href="index.html">Carte</a> · <b>Liste</b> · <a href="apprendre.html">Apprendre à lire</a></p>
   <h1>Où sortir en Guadeloupe</h1>
   <p class="meta">Rapport du {escape(report['generated'])} · {escape(report['sources'])}</p>
   {warn}
@@ -347,6 +384,7 @@ def page(report: dict) -> str:
   </div>
   <footer>
     <h2>Comment c'est calculé, et ce qui reste approximatif</h2>
+    <p>Chaque chiffre, ses échelles, ses sources et ses pièges : page <a href="apprendre.html">Apprendre à lire</a>.</p>
     <p><b>Modèles.</b> AROME Outre-Mer Antilles (Météo-France, maille 2,5 km) : le seul modèle qui voit le relief de la
     Basse-Terre ; il va jusqu'à 48 h après son heure de calcul. Au-delà : ECMWF (Open-Meteo), maille 9 à 25 km, qui voit
     l'île comme une bosse. La ligne « Prévision » de chaque jour indique quelles heures viennent de quel modèle.

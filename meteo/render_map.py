@@ -59,12 +59,19 @@ def page() -> str:
   .leaflet-tooltip.tt, .leaflet-popup-content { font-size:.8rem; line-height:1.35; }
   .tt b { font-size:.85rem; }
   .bad { color:#b3261e; font-size:.82rem; }
+  .q { display:inline-block; width:1.15em; height:1.15em; line-height:1.15em; text-align:center; border-radius:50%;
+    border:1px solid currentColor; color:var(--acc); font-size:.7rem; font-weight:700; text-decoration:none; margin-left:3px; }
+  .avis { border-left:4px solid var(--acc); }
+  .kv { width:100%; border-collapse:collapse; font-size:.8rem; margin:.3em 0; }
+  .kv td { padding:4px 3px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .kv td:first-child { width:36%; color:var(--muted); }
+  .conf { color:#fff; border-radius:999px; padding:1px 8px; font-size:.75rem; font-weight:600; white-space:nowrap; }
   .camicon { font-size:18px; line-height:22px; text-align:center; background:none; border:0; }
 </style></head>
 <body><div class="app">
 <header>
   <div class="top"><h1>Où sortir en Guadeloupe</h1>
-    <span class="switch"><b>Carte</b> <a href="liste.html">Liste</a></span></div>
+    <span class="switch"><b>Carte</b> <a href="liste.html">Liste</a> <a href="apprendre.html" title="Apprendre à lire">?</a></span></div>
   <details class="meta"><summary id="meta">Chargement…</summary><span id="sources"></span></details>
 </header>
 <div class="controls">
@@ -112,13 +119,15 @@ const scale = (name, x) => (G.echelles[name].find(r => x < r[0]) || G.echelles[n
 const lPluie = x => x === null ? "" : ` → ${scale("pluie", x)[1]} (AMS)`;
 const lVent = x => { if (x === null) return ""; const r = scale("beaufort", x); return ` → force ${r[1]}, ${r[2]} (Beaufort)`; };
 const lMer = x => { if (x === null) return ""; const r = scale("douglas", x); return ` → mer ${r[2]} (Douglas ${r[1]})`; };
-const lPer = p => p === null ? "" : (p < 8 ? " → houle courte, vagues molles" : p < 11 ? " → houle moyenne" : " → houle longue et puissante");
+const lPer = p => p === null ? "" : ` → ${scale("periode", p)[1]}`;
+const Q = a => a ? ` <a class="q" href="apprendre.html#${a}" title="Comment lire ce chiffre">?</a>` : "";
+const CONF_COL = {"élevée": "#1f9d55", "moyenne": "#f0a500", "faible": "#b3261e"};
 function detailScore(i) {
   const day = G.days[state.day], p = day.pens[state.cat][state.h][i], sc = day.score[state.cat][state.h][i];
   if (sc === null) return "";
-  if (!p) return `<br><span class="muted">Score = 100, aucune pénalité.</span>`;
+  if (!p) return `<br><span class="muted">Score = 100, aucune pénalité.</span>${Q("score")}`;
   const parts = Object.entries(p).map(([k, v]) => `${G.pen_labels[k]} −${v}`).join(" − ");
-  return `<br><span class="muted">Score = 100 − ${parts} = ${sc}</span>`;
+  return `<br><span class="muted">Score = 100 − ${parts} = ${sc}</span>${Q("score")}`;
 }
 
 function cellText(i) {
@@ -126,25 +135,25 @@ function cellText(i) {
   const sc = day.score[state.cat][h][i], R = k => day.raw[k][h][i];
   const src = day.src[h];
   let t = `<b>${CATS[state.cat].label} : ${sc === null ? "—" : sc}/100</b> · ${day.hours[h]}h · ${SRC[src] || "pas de donnée"}<br>`;
-  const rain = `Pluie : ${fmt(R("pluie"))} mm/h${lPluie(R("pluie"))}` +
-    (R("proba") !== null ? ` · risque d'averse ${R("proba")} % (part des scénarios ≥ 0,5 mm/h)` : "");
+  const rain = `Pluie : ${fmt(R("pluie"))} mm/h${lPluie(R("pluie"))}${Q("pluie")}` +
+    (R("proba") !== null ? ` · risque d'averse ${R("proba")} % (part des scénarios ≥ 0,5 mm/h)${Q("proba")}` : "");
   const alt = c.alt !== null ? `${c.alt} m` : "inconnu";
   const haut = R("haut_nuages") === 9999 ? "pas de plafond net" : (R("haut_nuages") !== null ? `~${R("haut_nuages")} m` : "—");
-  const layer = R("base_nuages") !== null ? `<br>Couche nuageuse d'alizé : base ~${R("base_nuages")} m, haut ${haut}` : "";
+  const layer = R("base_nuages") !== null ? `<br>Couche nuageuse d'alizé : base ~${R("base_nuages")} m, haut ${haut}${Q("couche")}` : "";
   const cloud = R("etat") ? `Relief moyen de la case : ${alt} — à cette hauteur : ${ETAT[R("etat")] || R("etat")}` +
-    (R("nuage_case") !== null ? ` (nuage ${R("nuage_case")} %, humidité ${R("hum_case")} %)` : "") + layer : "";
-  const sea = [`Vagues : ${fmt(R("vagues"))} m${lMer(R("vagues"))}`,
-               `Houle : ${fmt(R("houle"))} m · ${fmt(R("periode"), 0)} s · de ${R("dir_houle") || "—"}${lPer(R("periode"))}`,
-               `Vent : ${fmt(R("vent"), 0)} km/h (${R("vent") === null ? "—" : Math.round(R("vent") / 1.852)} nœuds)${lVent(R("vent"))} · rafales ${fmt(R("rafales"), 0)} km/h`, rain];
+    (R("nuage_case") !== null ? ` (nuage ${R("nuage_case")} %, humidité ${R("hum_case")} %)` : "") + Q("sommet") + layer : "";
+  const sea = [`Vagues : ${fmt(R("vagues"))} m${lMer(R("vagues"))}${Q("mer")}`,
+               `Houle : ${fmt(R("houle"))} m · ${fmt(R("periode"), 0)} s · de ${R("dir_houle") || "—"}${lPer(R("periode"))}${Q("houle")}`,
+               `Vent : ${fmt(R("vent"), 0)} km/h (${R("vent") === null ? "—" : Math.round(R("vent") / 1.852)} nœuds)${lVent(R("vent"))} · rafales ${fmt(R("rafales"), 0)} km/h${Q("vent")}`, rain];
   const lines = {
     mer: sea, surf: sea, kite: [sea[2], sea[0], rain],
-    rando: [rain, `Rafales : ${fmt(R("rafales"), 0)} km/h${lVent(R("rafales"))}`, `Vent : ${fmt(R("vent"), 0)} km/h${lVent(R("vent"))}`,
+    rando: [rain, `Rafales : ${fmt(R("rafales"), 0)} km/h (pointes)${Q("vent")}`, `Vent : ${fmt(R("vent"), 0)} km/h${lVent(R("vent"))}`,
             `Nuages bas : ${fmt(R("nuages_bas"), 0)} %`, cloud],
     riviere: [`Pluie des 24 h avant : ${fmt(R("pluie24"))} mm (90e percentile, case ±2,5 km) → ` +
               (R("pluie24") === null ? "—" : R("pluie24") < 4 ? "eau basse probable" : R("pluie24") < 10 ? "rivière un peu grossie" :
-               R("pluie24") < 25 ? "rivière grosse, prudence" : "crue possible : ne pas s'engager") + " (seuils de l'outil 4 / 10 / 25 mm)", rain,
+               R("pluie24") < 25 ? "rivière grosse, prudence" : "crue possible : ne pas s'engager") + " (seuils de l'outil 4 / 10 / 25 mm)" + Q("riviere"), rain,
               `Rafales : ${fmt(R("rafales"), 0)} km/h`],
-    sommet: [cloud, rain, `Nuages bas : ${fmt(R("nuages_bas"), 0)} %`, `Rafales : ${fmt(R("rafales"), 0)} km/h${lVent(R("rafales"))}`],
+    sommet: [cloud, rain, `Nuages bas : ${fmt(R("nuages_bas"), 0)} %`, `Rafales : ${fmt(R("rafales"), 0)} km/h (pointes)${Q("vent")}`],
   }[state.cat].filter(Boolean);
   return t + lines.join("<br>") + detailScore(i) + `<br><span class="muted">${c.ile || "En mer"} · case ${fmt(c.lat, 3)}, ${fmt(c.lon, 3)}` +
     ` (${c.kind === "mer" ? "5,5 km, modèle de vagues" : "maille AROME 2,5 km"})</span>`;
@@ -159,8 +168,9 @@ function spotText(sp) {
     (r.reasons ? r.reasons.join(" · ") + "<br>" : "") +
     (sp.conseil ? `<span class="muted">${sp.conseil}</span><br>` : "") +
     (sp.acces ? `<span class="warn">⚠ ${sp.acces}</span><br>` : "") +
-    (r.lecture && r.lecture.length ? `<b>Chiffres et lecture</b><ul class="small">${r.lecture.map(x => `<li>${x}</li>`).join("")}</ul>` : "") +
-    (r.detail ? `<b>Calcul</b><br><span class="small">Créneau = 0,6 × moyenne (${r.detail.moyenne}) + 0,4 × pire heure ` +
+    (r.lecture && r.lecture.length ? `<b>Chiffres et lecture</b><ul class="small">${r.lecture.map(x =>
+      typeof x === "string" ? `<li>${x}</li>` : `<li>${x.t}${Q(x.aide)}</li>`).join("")}</ul>` : "") +
+    (r.detail ? `<b>Calcul</b>${Q("score")}<br><span class="small">Créneau = 0,6 × moyenne (${r.detail.moyenne}) + 0,4 × pire heure ` +
       `(${r.detail.pire_h}h : ${r.detail.pire}) = ${r.detail.creneau}` +
       r.detail.ajustements.map(a => `<br>${a.raison} ${a.points === null ? "→ 0" : a.points}`).join("") +
       `<br>Pénalités moyennes : ${Object.entries(r.detail.pens_moy).map(([k, v]) => k + " −" + v).join(", ") || "aucune"}` +
@@ -198,12 +208,23 @@ function panel() {
     .sort((a, b) => (b.r.score ?? -1) - (a.r.score ?? -1));
   let h = "";
   (D.warnings || []).forEach(w => h += `<p class="bad">${w}</p>`);
-  h += `<div class="card"><h3>${dd.title}</h3><p class="small muted">Prévision : ${dd.couverture}</p>`;
-  if (sit.texte && sit.texte.length) {
-    h += `<p class="small"><b>Situation</b> <span class="muted">(${sit.source === "AROME" ? "profils AROME" : "ECMWF, sans profil fin"})</span></p><ul class="small">`;
-    sit.texte.forEach(t => h += `<li>${t}</li>`); h += "</ul>";
+  const av = dd.avis || {}, cf = av.confiance || {};
+  h += `<div class="card avis"><div class="row"><h3>L'avis du jour · ${dd.title.split(" · ")[0]}</h3>` +
+    (cf.niveau ? `<span class="conf" style="background:${CONF_COL[cf.niveau]}">Confiance ${cf.niveau}</span>` : "") + `</div>`;
+  if ((av.chiffres || []).length) {
+    h += `<table class="kv">` + av.chiffres.map(c => `<tr><td>${c.label}</td><td><b>${c.valeur}</b><br>` +
+      `<span class="muted">→ ${c.lecture}</span>${Q(c.aide)}</td></tr>`).join("") + `</table>`;
   }
-  h += "</div>";
+  const lect = av.lecture || sit.texte || [];
+  if (lect.length) {
+    h += `<p class="small"><b>Ce qu'en lirait un prévisionniste</b> <span class="muted">(${(av.source || sit.source) === "AROME" ? "profils AROME" : "ECMWF, sans profil fin"}, 6h-16h)</span>${Q("alize")}</p><ul class="small">`;
+    lect.forEach(t => h += `<li>${t}</li>`); h += "</ul>";
+  }
+  if ((av.retenir || []).length) h += `<p class="small"><b>À retenir :</b> ${av.retenir.join(" · ")}</p>`;
+  if ((av.soleil || []).length) h += `<p class="small"><b>Sommets :</b> ${av.soleil.join(" · ")}${Q("sommet")}</p>`;
+  if ((cf.lignes || []).length) h += `<details><summary class="small">Pourquoi cette confiance ?</summary><ul class="small">` +
+    cf.lignes.map(x => `<li>${x.t}${Q(x.aide)}</li>`).join("") + `</ul></details>`;
+  h += `<p class="small muted">Prévision : ${dd.couverture}</p></div>`;
   h += `<div class="card"><h3>${CATS[state.cat].label} — classement du jour</h3>`;
   list.forEach(({s, r}, k) => {
     h += `<div class="item" data-id="${s.id}"><div class="row"><span>${k + 1}. ${s.nom}</span>` +
@@ -223,7 +244,7 @@ function panel() {
     h += `</details></div>`;
   }
   h += `<p class="small muted">Cases = mailles réelles du modèle AROME (2,5 km). Pâles = heures sans AROME (ECMWF, tendance).
-    Score 0-100 calculé comme pour les activités. Méthodes et approximations détaillées en bas de la <a href="liste.html">liste</a>.</p>`;
+    Score 0-100 calculé comme pour les activités. Chaque chiffre expliqué dans <a href="apprendre.html">Apprendre à lire</a>.</p>`;
   const el = document.getElementById("panel"); el.innerHTML = h;
   el.querySelectorAll(".item").forEach(it => it.onclick = () => {
     const mk = markers.find(x => x.sp.id === it.dataset.id);

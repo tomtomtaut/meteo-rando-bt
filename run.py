@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from meteo import arome, ecmwf, grid, lecture, marine, render, render_map, scoring, situation, sommets, webcams
+from meteo import apprendre, arome, avis, ecmwf, grid, lecture, marine, render, render_map, scoring, situation, sommets, webcams
 
 log = logging.getLogger("rapport")
 ROOT = Path(__file__).parent
@@ -243,6 +243,8 @@ def main():
         dd = date.fromisoformat(d["date"])
         d["situation"]["texte"] = d["situation"].get("texte", []) + situation.islands_and_sea(
             dd, merged, d["situation"].get("wind", float("nan")), idx_h.get("mer_est"), idx_h.get("mer_nord"))
+        d["avis"] = avis.day_avis(dd, now, merged, cfg["spots"], d["top"], d["situation"], d["sommets"],
+                                  {"ar": ar, "ar_lag": ar_lag, "ec": ec, "ens": ens}, idx_h)
     report = {
         "generated": f"{render.fdate(local.date())} à {local.hour}h{local:%M}",
         "sources": sources, "warnings": warnings, "days": days, "spots": cfg["spots"],
@@ -253,6 +255,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     (out / "liste.html").write_text(render.page(report), encoding="utf-8")
     (out / "index.html").write_text(render_map.page(), encoding="utf-8")
+    (out / "apprendre.html").write_text(apprendre.page(), encoding="utf-8")
     (out / "grid.json").write_text(json.dumps(clean(grid_data), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     def geo(spot):
@@ -274,7 +277,7 @@ def main():
             "scores": {s["id"]: {k: r.get(k) for k in ("score", "label", "start", "end", "source", "reasons",
                                                          "detail", "mesures", "lecture")}
                        for s, r in d["all"]},
-            "situation": d["situation"],
+            "situation": d["situation"], "avis": d["avis"],
             "sommets": {x["nom"]: {"etats": {h["h"]: h["state"] for h in x["hours"]},
                                    "details": {h["h"]: h["det"] for h in x["hours"]},
                                    "lever": x["lever"], "coucher": x["coucher"], "texte": x["texte"]}

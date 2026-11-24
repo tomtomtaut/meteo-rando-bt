@@ -18,7 +18,8 @@ from datetime import date, datetime, timedelta, timezone
 import numpy as np
 
 from .heure import TZ  # noqa: E402
-WIND_WEAK, WIND_STRONG = 18, 36  # km/h vers 1 000 m
+WIND_WEAK, WIND_STRONG = 18, 36  # km/h vers 1 000 m. 18 km/h = 5 m/s : seuil des alizés faibles de la campagne
+                                 # DOMEX en Dominique (Smith et al. 2012) ; 36 km/h : seuil de l'outil
 MOIST_TOP_RH = 75                # % : l'air au-dessus de ce seuil est compté dans la couche humide
 DRY_ALOFT, MOIST_ALOFT = 35, 70  # % d'humidité à 700 hPa
 
@@ -100,8 +101,9 @@ def day_situation(d: date, profiles: dict, i_up: int | None, merged, i_up_ec: in
                        "est à l'abri (effet d'ombre pluviométrique). Rafales sur les crêtes.")
         elif wind <= WIND_WEAK:
             txt.append(f"Alizé faible (~{wind:.0f} km/h vers 1 000 m) : peu de forçage par le relief. "
-                       "Matinée souvent la plus dégagée, puis nuages et averses de chaleur sur le massif "
-                       "l'après-midi. Le versant sous-le-vent n'est pas forcément épargné.")
+                       "Les nuages se forment surtout par la chaleur et montent sur le massif en journée ; "
+                       "en Dominique (campagne DOMEX), ces jours-là donnaient nettement moins de pluie sur l'île "
+                       "qu'en alizé fort. Le versant sous-le-vent n'est pas forcément épargné.")
         else:
             txt.append(f"Alizé modéré (~{wind:.0f} km/h vers 1 000 m) : régime classique. Nuages accrochés "
                        "côté au vent et sur les sommets, éclaircies plus nettes côté sous-le-vent.")
@@ -135,7 +137,8 @@ def day_situation(d: date, profiles: dict, i_up: int | None, merged, i_up_ec: in
         txt.append(f"Brume de sable (poussières sahariennes ~{dmax:.0f} µg/m³) : ciel laiteux, vue lointaine voilée "
                    "même avec un sommet dégagé ; l'air sec qui l'accompagne limite souvent les averses.")
     return {"texte": txt, "source": src, "wind": wind, "moist_top": top, "inversion": inv, "rh700": rh700,
-            "dust": dmax}
+            "dust": dmax, "base": base, "top_lo": min(finite) if finite else float("nan"),
+            "top_hi": max(finite) if finite else float("nan")}
 
 
 def islands_and_sea(d: date, merged, wind: float, i_sea_e: int | None, i_sea_n: int | None) -> list[str]:
