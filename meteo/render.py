@@ -83,6 +83,20 @@ def sommets_block(d: dict) -> str:
             f'<div class="ticks"><span>{FIRST_H}h</span><span>12h</span><span>{LAST_H}h</span></div>{rows}</div></details>')
 
 
+def pepites_list(report: dict) -> list[dict]:
+    """Pépites en données (pour la carte) : [{jour, texte, fiable}]."""
+    out = []
+    for d in report["days"]:
+        day = d["title"].split(" · ")[1]
+        for kind, key in (("Lever", "lever"), ("Coucher", "coucher")):
+            names = [x for x in d.get("sommets", []) if x[key]["top"]]
+            if names:
+                out.append({"jour": day, "texte": f"{kind.lower()} {names[0][key]['heure']} dégagé : "
+                            + ", ".join(x["nom"] for x in names),
+                            "fiable": any(x[key].get("src") == "AROME" for x in names)})
+    return out
+
+
 def pepites(report: dict) -> str:
     items = []
     for d in report["days"]:
@@ -213,6 +227,7 @@ def page(report: dict) -> str:
   .sit ul {{ margin:.3em 0 0; padding-left:1.1em; }} .sit li {{ margin:.25em 0; }}
 </style></head>
 <body><main>
+  <p class="nav"><a href="index.html">Carte</a> · <b>Liste</b></p>
   <h1>Où sortir en Basse-Terre</h1>
   <p class="meta">Rapport du {escape(report['generated'])} · {escape(report['sources'])}</p>
   {warn}

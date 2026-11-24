@@ -203,6 +203,7 @@ def to_series(run: datetime, hmax: int, results: dict, inventory: dict, n_points
         ]),
         "lcc": _pick(inventory, [lambda s, t, l, n: s == "lcc", lambda s, t, l, n: "low cloud" in n]),
         "mcc": _pick(inventory, [lambda s, t, l, n: s == "mcc", lambda s, t, l, n: "medium cloud" in n or "middle cloud" in n]),
+        "sp": _pick(inventory, [lambda s, t, l, n: s == "sp", lambda s, t, l, n: n == "surface pressure"]),
         "rh": _pick(inventory, [
             lambda s, t, l, n: s in ("2r", "r2"),
             lambda s, t, l, n: s == "r" and t == "heightAboveGround" and l == 2,
@@ -248,6 +249,8 @@ def to_series(run: datetime, hmax: int, results: dict, inventory: dict, n_points
 
     if (v := grab(keys["lcc"])) is not None:
         out["lcc"] = _pct(v)
+    if (v := grab(keys["sp"])) is not None:
+        out["sp"] = v
     if (v := grab(keys["mcc"])) is not None:
         out["mcc"] = _pct(v)
     if (v := grab(keys["rh"])) is not None:

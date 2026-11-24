@@ -73,7 +73,7 @@ def merge(arome: dict | None, ecmwf: dict | None, n_points: int,
     idx = {t: i for i, t in enumerate(times)}
     T = len(times)
     data, source = {}, ["ECMWF" if ecmwf else "—"] * T
-    for var in ("precip", "lcc", "mcc", "rh", "rh850", "rh700", "ws925", "gust", "t2m", "cape"):
+    for var in ("precip", "lcc", "mcc", "rh", "rh850", "rh700", "ws925", "gust", "t2m", "cape", "sp"):
         arr = np.full((T, n_points), np.nan)
         if ecmwf and var in ecmwf:
             for i, t in enumerate(ecmwf["times"]):

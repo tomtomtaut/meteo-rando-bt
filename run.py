@@ -9,13 +9,28 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from meteo import arome, ecmwf, render, scoring, situation, sommets
+import numpy as np
+
+from meteo import arome, ecmwf, grid, render, render_map, scoring, situation, sommets
 
 log = logging.getLogger("rapport")
 ROOT = Path(__file__).parent
+
+
+def clean(x):
+    """JSON valide pour un navigateur : NaN et infinis deviennent null."""
+    if isinstance(x, float):
+        return None if (x != x or x in (float("inf"), float("-inf"))) else x
+    if isinstance(x, dict):
+        return {k: clean(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [clean(v) for v in x]
+    if isinstance(x, np.generic):
+        return clean(x.item())
+    return x
 
 
 class Points:
@@ -74,14 +89,22 @@ def main():
 
     now = datetime.now(timezone.utc)
     cfg, pts, idx_h = load_config()
+    n_spots = len(pts.coords)
+    grid_cells = grid.cells()
+    grid_idx = [pts.add({**c, "alt": 0}) for c in grid_cells]
     n = len(pts.coords)
+    log.info("%d points d'activités + %d mailles de grille", n_spots, len(grid_cells))
     warnings, debug = [], {"points": [{"lat": la, "lon": lo, "alt": a} for (la, lo), a in zip(pts.coords, pts.alts)]}
 
     ec = ecmwf.fetch(pts.coords, pts.alts)
     if ec is None:
         warnings.append("ECMWF (Open-Meteo) indisponible : les heures au-delà d'AROME ne sont pas calculées.")
-    ens = ecmwf.fetch_ensemble(pts.coords)
-    if ens is None:
+    ens = ecmwf.fetch_ensemble(pts.coords[:n_spots])  # ensemble sur les activités seulement (volume)
+    if ens is not None:
+        full = np.full(ens["precip_ens"].shape[:1] + (n,) + ens["precip_ens"].shape[2:], np.nan)
+        full[:, :n_spots] = ens["precip_ens"]
+        ens["precip_ens"] = full
+    else:
         warnings.append("Ensemble ECMWF indisponible : au-delà d'AROME, pluie en un seul scénario (pas de probabilité).")
     som0 = cfg.get("sommets", [{}])[0]
     dust = ecmwf.fetch_dust(som0.get("lat", 16.04), som0.get("lon", -61.66))
@@ -93,13 +116,13 @@ def main():
         found = arome.find_run(now)
         if found:
             run, hmax = found
-            results, inventory, grid = arome.download(run, hmax, pts.coords)
+            results, inventory, grid_info = arome.download(run, hmax, pts.coords)
             ar = arome.to_series(run, hmax, results, inventory, n)
             end_local = (run + timedelta(hours=hmax)).astimezone(scoring.TZ)
             run_txt = (f"AROME Antilles run {run:%d/%m %Hh} UTC (jusqu'à {render.fdate(end_local.date())} "
                        f"{end_local.hour}h)")
             debug.update({"run": run.isoformat(), "hmax": hmax, "keys": ar["keys"], "precip_mode": ar.get("precip_mode"),
-                          "inventory": inventory, "grid": grid, "files_read": len(results)})
+                          "inventory": inventory, "grid": grid_info, "files_read": len(results)})
             missing = [k for k in ("precip", "lcc", "rh", "gust") if k not in ar]
             if missing:
                 warnings.append(f"Champs AROME non trouvés : {', '.join(missing)} (remplacés par ECMWF).")
@@ -140,7 +163,13 @@ def main():
     sources = run_txt + (f" · au-delà : {ec['model']}" if ec else "") + (
         f" et ensemble {ens['model']} ({ens['n_members']} scénarios)" if ens else "") + " (Open-Meteo)"
     merged = scoring.merge(ar, ec, n, arome_lag=ar_lag, ens=ens)
-    merged.summit_state = sommets.compute_states(high_points(cfg, pts), profiles, merged, idx_h.get("au_vent"))
+    # état « dans le nuage » : sommets + objectifs en altitude à leur altitude réelle,
+    # mailles de la grille à l'altitude de leur relief (lissé) dans le modèle
+    grid_alts = [grid.model_altitude(merged, i) for i in grid_idx]
+    pts_alt = high_points(cfg, pts)
+    for i, a in zip(grid_idx, grid_alts):
+        pts_alt.setdefault(i, (0 if np.isnan(a) else a) + 20)
+    merged.summit_state = sommets.compute_states(pts_alt, profiles, merged, idx_h.get("au_vent"))
 
     local = now.astimezone(scoring.TZ)
     today = local.date()
@@ -165,6 +194,11 @@ def main():
             "sommets": [sommets.day_summary(s, s["_i"], merged.summit_state, merged, d,
                                             idx_h.get("est"), idx_h.get("ouest")) for s in cfg.get("sommets", [])],
         })
+    nb_today = now if first == 0 else None
+    grid_data = grid.compute(merged, grid_idx, grid_alts, [date.fromisoformat(d["date"]) for d in days], nb_today)
+    grid_data["cells"] = [{"lat": c["lat"], "lon": c["lon"], "alt": None if np.isnan(a) else round(a)}
+                          for c, a in zip(grid_cells, grid_alts)]
+    grid_data["step"] = grid.STEP
     report = {
         "generated": f"{render.fdate(local.date())} à {local.hour}h{local:%M}",
         "sources": sources, "warnings": warnings, "days": days, "spots": cfg["spots"],
@@ -173,11 +207,25 @@ def main():
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    (out / "index.html").write_text(render.page(report), encoding="utf-8")
+    (out / "liste.html").write_text(render.page(report), encoding="utf-8")
+    (out / "index.html").write_text(render_map.page(), encoding="utf-8")
+    (out / "grid.json").write_text(json.dumps(clean(grid_data), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+    def geo(spot):
+        p = next(p for p in spot["points"] if p["role"] == "objectif")
+        cat = "riviere" if spot["type"] == "riviere" else ("sommet" if spot["_high"] else "rando")
+        return {"id": spot["id"], "nom": spot["nom"], "cat": cat, "type": spot["type"], "lat": p["lat"],
+                "lon": p["lon"], "secteur": spot["secteur"], "niveau": spot["niveau"],
+                "acces": spot.get("acces", ""), "conseil": spot.get("conseil", "")}
+
     compact = {
-        "generated_utc": now.isoformat(), "sources": sources, "warnings": warnings,
+        "generated_utc": now.isoformat(), "generated": report["generated"], "sources": sources, "warnings": warnings,
+        "spots": [geo(s) for s in cfg["spots"]],
+        "webcams": cfg.get("webcams", []),
+        "pepites": render.pepites_list(report),
         "days": [{
-            "date": d["date"], "top": [s["id"] for s, _ in d["top"]],
+            "date": d["date"], "title": d["title"], "couverture": d["couverture"],
+            "top": [s["id"] for s, _ in d["top"]],
             "scores": {s["id"]: {k: r.get(k) for k in ("score", "label", "start", "end", "source", "reasons")}
                        for s, r in d["all"]},
             "situation": d["situation"],
@@ -187,12 +235,12 @@ def main():
                         for x in d["sommets"]},
         } for d in days],
     }
-    (out / "data.json").write_text(json.dumps(compact, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
-    (out / "debug.json").write_text(json.dumps(debug, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    (out / "data.json").write_text(json.dumps(clean(compact), ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    (out / "debug.json").write_text(json.dumps(clean(debug), ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     if args.history:
         h = Path(args.history)
         h.mkdir(parents=True, exist_ok=True)
-        (h / f"{local:%Y-%m-%d_%Hh}.json").write_text(json.dumps(compact, ensure_ascii=False, default=str), encoding="utf-8")
+        (h / f"{local:%Y-%m-%d_%Hh}.json").write_text(json.dumps(clean(compact), ensure_ascii=False, default=str), encoding="utf-8")
     for d in days:
         log.info("%s : %s", d["title"], ", ".join(f"{s['nom']} ({r['score']})" for s, r in d["top"]) or "rien")
         sf = d["sommets"][0] if d["sommets"] else None

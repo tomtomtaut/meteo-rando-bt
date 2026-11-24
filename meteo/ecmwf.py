@@ -31,7 +31,6 @@ def fetch(points: list[tuple[float, float]], alts: list[float]) -> dict | None:
     params = {
         "latitude": ",".join(f"{la:.4f}" for la, _ in points),
         "longitude": ",".join(f"{lo:.4f}" for _, lo in points),
-        "elevation": ",".join(f"{a:.0f}" for a in alts),
         "hourly": ",".join(VARS.values()),
         "timezone": "GMT",
         "past_days": 2,
