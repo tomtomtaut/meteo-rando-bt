@@ -29,6 +29,8 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python run.py --out site --history history
+        env:
+          WINDY_WEBCAMS_KEY: ${{ secrets.WINDY_WEBCAMS_KEY }}
       # Archive des scores (sert à calibrer, et garde le dépôt actif :
       # GitHub coupe les tâches planifiées d'un dépôt public après 60 jours sans activité)
       - name: Archiver les scores

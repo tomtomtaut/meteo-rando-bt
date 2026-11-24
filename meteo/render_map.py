@@ -59,6 +59,7 @@ def page() -> str:
   .leaflet-tooltip.tt, .leaflet-popup-content { font-size:.8rem; line-height:1.35; }
   .tt b { font-size:.85rem; }
   .bad { color:#b3261e; font-size:.82rem; }
+  .camicon { font-size:18px; line-height:22px; text-align:center; background:none; border:0; }
 </style></head>
 <body><div class="app">
 <header>
@@ -179,11 +180,12 @@ function panel() {
     D.pepites.forEach(p => h += `<li><b>${p.jour}</b> · ${p.texte} <span class="tag ${p.fiable ? "ok" : ""}">${p.fiable ? "AROME" : "tendance, peu fiable"}</span></li>`);
     h += "</ul></div>";
   }
-  (D.webcams || []).forEach(w => {
-    h += `<div class="card"><details><summary>Webcam — ${w.titre}</summary>
-      <iframe class="cam" loading="lazy" src="https://webcams.windy.com/webcams/public/embed/player/${w.id}/day"></iframe>
-      <p class="small"><a href="https://www.windy.com/webcams/${w.id}">ouvrir sur Windy</a></p></details></div>`;
-  });
+  if ((D.webcams || []).length) {
+    h += `<div class="card"><details><summary>Webcams (${D.webcams.length}) — aussi sur la carte 📷</summary>`;
+    D.webcams.forEach(w => h += `<p class="small"><b>${w.titre}</b> · <a href="${w.lien}">ouvrir sur Windy</a></p>
+      <iframe class="cam" loading="lazy" src="${w.player}"></iframe>`);
+    h += `</details></div>`;
+  }
   h += `<p class="small muted">Cases = mailles réelles du modèle AROME (2,5 km). Pâles = heures sans AROME (ECMWF, tendance).
     Score 0-100 calculé comme pour les activités. Méthodes et approximations détaillées en bas de la <a href="liste.html">liste</a>.</p>`;
   const el = document.getElementById("panel"); el.innerHTML = h;
@@ -212,6 +214,12 @@ Promise.all([fetch("grid.json").then(r => r.json()), fetch("data.json").then(r =
     const m = L.circleMarker([sp.lat, sp.lon], {radius: 8, weight: 2, color: "#fff", fillOpacity: 1});
     m.bindPopup(() => spotText(sp)); m.bindTooltip(sp.nom, {direction: "top", offset: [0, -6]});
     markers.push({m, sp});
+  });
+  (d.webcams || []).filter(w => w.lat && w.lon).forEach(w => {
+    const icon = L.divIcon({html: "📷", className: "camicon", iconSize: [22, 22]});
+    L.marker([w.lat, w.lon], {icon}).addTo(map).bindPopup(
+      `<b>${w.titre}</b><br><iframe class="cam" style="width:260px;height:170px" loading="lazy" src="${w.player}"></iframe>` +
+      `<br><a href="${w.lien}">ouvrir sur Windy</a>`, {maxWidth: 280});
   });
   const days = document.getElementById("days");
   d.days.forEach((dd, i) => { const b = document.createElement("button"); b.className = "chip";

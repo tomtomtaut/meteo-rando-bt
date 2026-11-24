@@ -144,15 +144,17 @@ def webcams(report: dict) -> str:
     out = []
     for w in report.get("webcams", []):
         wid = escape(str(w["id"]))
+        src = escape(w.get("player") or f"https://webcams.windy.com/webcams/public/embed/player/{wid}/day")
+        lien = escape(w.get("lien") or f"https://www.windy.com/webcams/{wid}")
         out.append(f"""
     <div class="cam">
-      <iframe src="https://webcams.windy.com/webcams/public/embed/player/{wid}/day" loading="lazy"
-        title="{escape(w['titre'])}" allowfullscreen></iframe>
-      <p class="small">{escape(w['titre'])} · <a href="https://www.windy.com/webcams/{wid}">ouvrir sur Windy</a></p>
+      <iframe src="{src}" loading="lazy" title="{escape(w['titre'])}" allowfullscreen></iframe>
+      <p class="small">{escape(w['titre'])} · <a href="{lien}">ouvrir sur Windy</a></p>
     </div>""")
     if not out:
         return ""
-    return f"<details open><summary><b>Webcam</b> (dernières 24 h)</summary>{''.join(out)}</details>"
+    return (f"<details open><summary><b>Webcams</b> ({len(out)}, dernières 24 h, Windy)</summary>"
+            f"<div class='cams'>{''.join(out)}</div></details>")
 
 
 def legend() -> str:
@@ -247,6 +249,7 @@ def page(report: dict) -> str:
   .lg .h {{ display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:4px; }}
   .pep li {{ margin:.3em 0; }}
   .cam iframe {{ width:100%; height:240px; border:0; border-radius:12px; }}
+  .cams {{ display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:10px; }}
   .strip .faded {{ opacity:.4; }}
   .tag {{ font-size:.72rem; border:1px solid currentColor; border-radius:6px; padding:0 5px; color:var(--muted); }}
   .tag.ok {{ color:#1f9d55; }}

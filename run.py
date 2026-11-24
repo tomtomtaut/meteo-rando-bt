@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from meteo import arome, ecmwf, grid, render, render_map, scoring, situation, sommets
+from meteo import arome, ecmwf, grid, render, render_map, scoring, situation, sommets, webcams
 
 log = logging.getLogger("rapport")
 ROOT = Path(__file__).parent
@@ -202,7 +202,7 @@ def main():
     report = {
         "generated": f"{render.fdate(local.date())} à {local.hour}h{local:%M}",
         "sources": sources, "warnings": warnings, "days": days, "spots": cfg["spots"],
-        "exclus": cfg.get("exclus", []), "webcams": cfg.get("webcams", []),
+        "exclus": cfg.get("exclus", []), "webcams": webcams.fetch(cfg.get("webcams", [])),
     }
 
     out = Path(args.out)
@@ -221,7 +221,7 @@ def main():
     compact = {
         "generated_utc": now.isoformat(), "generated": report["generated"], "sources": sources, "warnings": warnings,
         "spots": [geo(s) for s in cfg["spots"]],
-        "webcams": cfg.get("webcams", []),
+        "webcams": report["webcams"],
         "pepites": render.pepites_list(report),
         "days": [{
             "date": d["date"], "title": d["title"], "couverture": d["couverture"],

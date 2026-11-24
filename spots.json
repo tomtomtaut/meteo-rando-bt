@@ -874,9 +874,16 @@
   },
   "webcams": [
     {
+      "id": "1793904168",
+      "titre": "Terre-de-Haut (Saintes), vue vers le nord : sud de la Basse-Terre et Soufrière",
+      "lat": 15.875,
+      "lon": -61.585
+    },
+    {
       "id": "1649349158",
-      "titre": "Baillif, vue vers l'est (massif de la Soufrière ?)",
-      "note": "À vérifier : si elle ne montre pas le volcan, remplacer l'id par une autre webcam Windy."
+      "titre": "Baillif, vue vers l'est (ne montre pas forcément le volcan)",
+      "lat": 16.02,
+      "lon": -61.745
     }
   ]
 }
