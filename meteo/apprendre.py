@@ -264,6 +264,20 @@ def page() -> str:
       ~50 µg/m³ <span class="b outil">seuil de l'outil</span>, ciel laiteux et vue lointaine voilée, même avec un
       sommet au-dessus des nuages. L'air sec qui accompagne ces épisodes limite souvent les averses.</p>"""))
 
+    s.append(_sec("everesting", "Everesting à la Soufrière", OUTIL, """
+      <p>Parcours : Bains Jaunes → Pas du Roy → Savane à Mulets → Chemin des Dames → sommet, et retour. 510 m de
+      dénivelé par aller-retour d'après la fiche officielle, donc 18 allers-retours pour 8 848 m.</p>
+      <p>L'outil teste toutes les fenêtres de 24 h sur environ 6 jours (départ à chaque heure), sur trois points du
+      parcours (Bains Jaunes, Savane à Mulets, sommet), et garde par jour la moins mauvaise. Ordre de priorité :
+      pas d'orage possible (le sommet est exposé et on y passe 18 fois), puis le moins de pluie cumulée, puis le moins
+      d'heures de pluie modérée (≥ 2,5 mm/h, échelle AMS : sentiers glissants), puis les rafales au sommet.</p>
+      <p>⭐ s'allume si : pas d'orage, 5 mm au plus sur 24 h, aucune heure de pluie modérée, rafales au sommet sous
+      50 km/h, et au moins 70 % des 51 scénarios ECMWF à 5 mm ou moins. Seuils de départ, à ajuster après une tentative.</p>
+      <p class="piege"><b>Pièges.</b> À 3 jours, seul ECMWF (maille ~25 km) couvre la fenêtre : il voit le régime
+      (alizé, air sec ou humide), pas le détail sur le volcan, et il sous-estime souvent la pluie de relief. La
+      colonne « Modèle » dit d'où vient la fenêtre : la veille, AROME doit confirmer. La température au sommet est
+      à 2 m, à l'abri du vent : avec le vent et l'humidité, le ressenti est plus froid.</p>"""))
+
     s.append(_sec("modeles", "D'où viennent les chiffres : les modèles", ECHELLE, """
       <ul>
         <li><b>AROME Outre-Mer Antilles</b> (Météo-France) : maille de 2,5 km, le seul qui voit les vallées et les
@@ -305,7 +319,7 @@ def page() -> str:
         ("score", "score"), ("pluie", "pluie"), ("proba", "risque d'averse"), ("riviere", "rivières"),
         ("alize", "alizé"), ("couche", "couche nuageuse"), ("sommet", "sommets"), ("vent", "vent"),
         ("cape", "CAPE"), ("mer", "mer"), ("houle", "houle"), ("kite", "kite"), ("chaleur", "chaleur"),
-        ("poussieres", "poussières"), ("modeles", "modèles"), ("confiance", "confiance")])
+        ("poussieres", "poussières"), ("everesting", "Everesting"), ("modeles", "modèles"), ("confiance", "confiance")])
 
     return f"""<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8">

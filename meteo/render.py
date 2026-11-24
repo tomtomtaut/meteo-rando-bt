@@ -213,6 +213,44 @@ def pepite_detail(names: list[dict], key: str, d: dict) -> str:
             f'{" Confiance du jour : " + escape(conf) + "." if conf else ""}{q("couche")}</p></details>')
 
 
+def ever_badge(ev: dict | None) -> str:
+    if not ev or not ev.get("jours"):
+        return ""
+    st, best = ev.get("etoile"), ev.get("meilleure")
+    if st:
+        conf = "" if st["source"] == "AROME" else " · tendance, à confirmer la veille avec AROME"
+        pl = f"{st['pluie']:g}".replace(".", ",")
+        return (f'<a class="ever on" href="#everesting">⭐ Everesting Soufrière : départ {escape(st["depart_txt"])}'
+                f' ({pl} mm sur 24 h{conf})</a>')
+    return (f'<a class="ever" href="#everesting">☆ Everesting : pas encore de fenêtre · la moins mauvaise : '
+            f'départ {escape(best["depart_txt"])}</a>')
+
+
+def everesting_html(ev: dict | None) -> str:
+    if not ev or not ev.get("jours"):
+        return ""
+    f1 = lambda x: "—" if x is None else f"{x:g}".replace(".", ",")  # noqa: E731
+    rows = "".join(
+        "<tr" + (" class='star'" if w["etoile"] else "") + f"><td>{'⭐ ' if w['etoile'] else ''}{escape(w['depart_txt'])}</td>"
+        f"<td>{f1(w['pluie'])} mm<br><small>{w['heures_moderees']} h ≥ 2,5 mm/h</small></td>"
+        f"<td>{'oui' if w['orage'] else 'non'}</td><td>{f1(w['rafales'])} km/h</td>"
+        f"<td>{f1(w['tmin'])} °C<br><small>vent {f1(w['vent_max'])} km/h</small></td><td>{w['nuage_h']} h</td>"
+        f"<td>{'—' if w['scenarios'] is None else str(w['scenarios']) + ' %'}</td><td><small>{escape(w['source'])}</small></td></tr>"
+        for w in ev["jours"])
+    s_ = ev["seuils"]
+    return f"""
+  <h2 id="everesting">Everesting à la Soufrière{q("everesting")}</h2>
+  <p class="small">Bains Jaunes → Savane à Mulets → Chemin des Dames → sommet, et retour : {ev['dplus_ar']} m par
+  aller-retour (fiche officielle), soit {ev['allers_retours']} allers-retours pour 8 848 m. En 20 à 24 h, ça fait
+  environ 1h05 à 1h20 par aller-retour. Pour chaque jour : la meilleure fenêtre de 24 h qui démarre ce jour-là.</p>
+  <div class="table"><table class="ev"><tr><th>Départ</th><th>Pluie 24 h</th><th>Orage</th><th>Rafales sommet</th>
+  <th>Nuit au sommet</th><th>Dans le nuage</th><th>Scénarios ≤ {s_['pluie']:g} mm</th><th>Modèle</th></tr>{rows}</table></div>
+  <p class="small muted">⭐ = pas d'orage, ≤ {s_['pluie']:g} mm sur 24 h, aucune heure ≥ 2,5 mm/h, rafales au sommet
+  &lt; {s_['rafales']} km/h, et au moins {s_['scenarios']} % des scénarios ECMWF ≤ {s_['pluie']:g} mm (seuils de l'outil).
+  Au-delà de ~2 jours, seul ECMWF couvre la fenêtre : c'est une tendance. Vérifier la veille, et l'accès au sommet
+  (arrêté préfectoral) auprès du Parc national.</p>"""
+
+
 def pepites(report: dict) -> str:
     items = []
     for d in report["days"]:
@@ -369,6 +407,10 @@ def page(report: dict) -> str:
   .kv {{ width:100%; font-size:.86rem; margin:.4em 0; }}
   .kv td {{ text-align:left; padding:5px 4px; }} .kv td:first-child {{ width:34%; color:var(--muted); }}
   .avis ul {{ margin:.2em 0; padding-left:1.1em; }}
+  .ever {{ display:block; text-decoration:none; color:var(--fg); background:var(--card); border:1px dashed rgba(128,128,128,.5);
+    border-radius:12px; padding:8px 12px; margin:8px 0; font-size:.9rem; }}
+  .ever.on {{ border:2px solid #f0a500; background:rgba(240,165,0,.12); font-weight:600; }}
+  table.ev td, table.ev th {{ text-align:left; font-size:.8rem; }} tr.star td {{ background:rgba(240,165,0,.15); }}
   .expl {{ margin-top:6px; }} .expl summary {{ color:#1f6f4a; font-size:.85rem; }}
   .expl ul {{ padding-left:1.1em; margin:.3em 0; }} .expl li {{ margin:.25em 0; }}
 </style></head>
@@ -377,6 +419,7 @@ def page(report: dict) -> str:
   <h1>Où sortir en Guadeloupe</h1>
   <p class="meta">Rapport du {escape(report['generated'])} · {escape(report['sources'])}</p>
   {warn}
+  {ever_badge(report.get("everesting"))}
   <div class="bar">
     <div class="chips" id="views"><button class="chip on" data-v="jour">Par jour</button><button class="chip" data-v="rank">Classement</button></div>
   </div>
@@ -393,6 +436,7 @@ def page(report: dict) -> str:
   <div id="v-jour">
   <h2>Les pépites</h2>
   {pepites(report)}
+  {everesting_html(report.get("everesting"))}
   {webcams(report)}
   <p class="legend">{legend()}</p>
   {''.join(days_html)}

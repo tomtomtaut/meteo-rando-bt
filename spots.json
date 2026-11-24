@@ -1404,7 +1404,7 @@
   },
   {
    "id": "mer-surf-moule",
-   "nom": "Surf au Moule",
+   "nom": "Surf au Moule (Damencourt, Anse Salabouelle, Les Alizés)",
    "ile": "Mer",
    "secteur": "Le Moule",
    "type": "mer",
@@ -1428,7 +1428,7 @@
   },
   {
    "id": "mer-surf-port-louis",
-   "nom": "Surf à Port-Louis",
+   "nom": "Surf à Port-Louis (Souffleur, Antigues)",
    "ile": "Mer",
    "secteur": "Port-Louis",
    "type": "mer",
@@ -1453,7 +1453,7 @@
   },
   {
    "id": "mer-surf-st-francois",
-   "nom": "Surf à Saint-François",
+   "nom": "Surf à Saint-François (Anse à la Gourde, le Port, Roba)",
    "ile": "Mer",
    "secteur": "Saint-François",
    "type": "mer",
@@ -1498,7 +1498,7 @@
   },
   {
    "id": "mer-kite-st-francois",
-   "nom": "Kitesurf / wingfoil à Saint-François",
+   "nom": "Kitesurf / wingfoil à Saint-François (Méridien, port de pêche, lagon)",
    "ile": "Mer",
    "secteur": "Saint-François",
    "type": "mer",
@@ -1539,6 +1539,450 @@
      "lon": -61.675,
      "alt": 300,
      "role": "amont"
+    }
+   ]
+  },
+  {
+   "id": "mer-surf-anse-bertrand",
+   "nom": "Surf à Anse-Bertrand (La Chapelle)",
+   "ile": "Mer",
+   "secteur": "Anse-Bertrand",
+   "type": "mer",
+   "mer": "surf",
+   "niveau": "Hors sentiers",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Confirmés. Récif, droite ; marche par houle de nord. Souvent plus petit et plus abordable quand c'est gros ailleurs. Sources : kite-and-windsurfing-guide, surf-report.",
+   "points": [
+    {
+     "nom": "Anse-Bertrand",
+     "lat": 16.474,
+     "lon": -61.508,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ],
+   "houle": [
+    300,
+    50
+   ]
+  },
+  {
+   "id": "mer-surf-helleux",
+   "nom": "Surf au Helleux (Sainte-Anne, Gros Sable)",
+   "ile": "Mer",
+   "secteur": "Sainte-Anne",
+   "type": "mer",
+   "mer": "surf",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Débutants. Houles de sud et d'est-sud-est (source : Air Caraïbes, écoles de surf sur place).",
+   "points": [
+    {
+     "nom": "Sainte-Anne",
+     "lat": 16.222,
+     "lon": -61.405,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ],
+   "houle": [
+    90,
+    200
+   ]
+  },
+  {
+   "id": "mer-surf-petit-havre",
+   "nom": "Surf à Petit-Havre (Le Gosier)",
+   "ile": "Mer",
+   "secteur": "Le Gosier",
+   "type": "mer",
+   "mer": "surf",
+   "niveau": "Intermédiaire",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Confirmés. Gauche qui s'enroule autour du récif. Côte sud : orientation de houle estimée d'après l'orientation de la côte.",
+   "points": [
+    {
+     "nom": "Le Gosier",
+     "lat": 16.21,
+     "lon": -61.44,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ],
+   "houle": [
+    90,
+    210
+   ]
+  },
+  {
+   "id": "mer-surf-bananier",
+   "nom": "Surf à Bananier (Capesterre-Belle-Eau)",
+   "ile": "Mer",
+   "secteur": "Capesterre-Belle-Eau",
+   "type": "mer",
+   "mer": "surf",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Beach break de sable noir, un des seuls de l'île, adapté pour débuter. Côte est de Basse-Terre : orientation de houle estimée d'après l'orientation de la côte.",
+   "points": [
+    {
+     "nom": "Capesterre-Belle-Eau",
+     "lat": 16.02,
+     "lon": -61.58,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ],
+   "houle": [
+    45,
+    180
+   ]
+  },
+  {
+   "id": "mer-surf-grande-anse-deshaies",
+   "nom": "Surf à Grande Anse (Deshaies)",
+   "ile": "Mer",
+   "secteur": "Deshaies",
+   "type": "mer",
+   "mer": "surf",
+   "niveau": "Intermédiaire",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Confirmés. Droite puissante qui finit sur le sable. Côte nord-ouest : orientation de houle estimée d'après l'orientation de la côte.",
+   "points": [
+    {
+     "nom": "Deshaies",
+     "lat": 16.32,
+     "lon": -61.79,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ],
+   "houle": [
+    270,
+    30
+   ]
+  },
+  {
+   "id": "mer-surf-cluny",
+   "nom": "Surf à Cluny (Sainte-Rose)",
+   "ile": "Mer",
+   "secteur": "Sainte-Rose",
+   "type": "mer",
+   "mer": "surf",
+   "niveau": "Hors sentiers",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Expérimentés seulement : beach break avec courant parfois très fort, baignade dangereuse. Côte nord : orientation de houle estimée d'après l'orientation de la côte.",
+   "points": [
+    {
+     "nom": "Sainte-Rose",
+     "lat": 16.345,
+     "lon": -61.727,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ],
+   "houle": [
+    300,
+    60
+   ]
+  },
+  {
+   "id": "mer-kite-sainte-anne",
+   "nom": "Kitesurf / wingfoil à Sainte-Anne (plage du bourg, anse du Belley)",
+   "ile": "Mer",
+   "secteur": "Sainte-Anne",
+   "type": "mer",
+   "mer": "kite",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "École de kite sur place, zone de décollage aménagée. Tous niveaux.",
+   "points": [
+    {
+     "nom": "Sainte-Anne",
+     "lat": 16.2245,
+     "lon": -61.384,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-kite-salines",
+   "nom": "Kitesurf dans les vagues aux Salines (Pointe des Châteaux)",
+   "ile": "Mer",
+   "secteur": "Saint-François",
+   "type": "mer",
+   "mer": "kite",
+   "niveau": "Hors sentiers",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Vagues : pour kiteurs expérimentés.",
+   "points": [
+    {
+     "nom": "Saint-François",
+     "lat": 16.25,
+     "lon": -61.2,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-kite-moule",
+   "nom": "Kitesurf dans les vagues au Moule",
+   "ile": "Mer",
+   "secteur": "Le Moule",
+   "type": "mer",
+   "mer": "kite",
+   "niveau": "Hors sentiers",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Kite dans les vagues par vent d'est, récif : expérimentés.",
+   "points": [
+    {
+     "nom": "Le Moule",
+     "lat": 16.335,
+     "lon": -61.345,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-kite-port-louis",
+   "nom": "Kitesurf / wingfoil à Port-Louis (Souffleur)",
+   "ile": "Mer",
+   "secteur": "Port-Louis",
+   "type": "mer",
+   "mer": "kite",
+   "niveau": "Intermédiaire",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Freeride propre quand l'alizé est bien établi.",
+   "points": [
+    {
+     "nom": "Port-Louis",
+     "lat": 16.418,
+     "lon": -61.533,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-kite-anse-bertrand",
+   "nom": "Kitesurf à Anse-Bertrand",
+   "ile": "Mer",
+   "secteur": "Anse-Bertrand",
+   "type": "mer",
+   "mer": "kite",
+   "niveau": "Hors sentiers",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Cité par le guide kite & windsurf ; récif et vagues : expérimentés.",
+   "points": [
+    {
+     "nom": "Anse-Bertrand",
+     "lat": 16.474,
+     "lon": -61.508,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-kite-ilet-caret",
+   "nom": "Kitesurf / wingfoil vers l'Îlet Caret (Grand Cul-de-Sac Marin)",
+   "ile": "Mer",
+   "secteur": "Sainte-Rose",
+   "type": "mer",
+   "mer": "kite",
+   "niveau": "Intermédiaire",
+   "duree_h": 3,
+   "acces": "Îlet Caret : accès et usages réglementés par arrêté municipal, vérifier les règles en vigueur.",
+   "conseil": "Lagon du Grand Cul-de-Sac Marin.",
+   "points": [
+    {
+     "nom": "Sainte-Rose",
+     "lat": 16.373,
+     "lon": -61.69,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-snorkel-malendure",
+   "nom": "Snorkeling à Malendure (tortues)",
+   "ile": "Mer",
+   "secteur": "Bouillante",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Un des meilleurs spots pour voir des tortues ; départ aussi vers la Réserve Cousteau.",
+   "points": [
+    {
+     "nom": "Bouillante",
+     "lat": 16.172,
+     "lon": -61.778,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-snorkel-souffleur",
+   "nom": "Snorkeling à l'Anse du Souffleur (Port-Louis)",
+   "ile": "Mer",
+   "secteur": "Port-Louis",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Eau calme et peu profonde, herbiers qui attirent parfois les tortues ; parfait pour débuter.",
+   "points": [
+    {
+     "nom": "Port-Louis",
+     "lat": 16.418,
+     "lon": -61.533,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-snorkel-ilet-caret",
+   "nom": "Snorkeling à l'Îlet Caret (Grand Cul-de-Sac Marin)",
+   "ile": "Mer",
+   "secteur": "Sainte-Rose",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "Accès et usages réglementés par arrêté municipal : vérifier les règles en vigueur.",
+   "conseil": "Banc de sable et lagon peu profond, mangroves.",
+   "points": [
+    {
+     "nom": "Sainte-Rose",
+     "lat": 16.373,
+     "lon": -61.69,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-snorkel-salines",
+   "nom": "Snorkeling à l'Anse des Salines (Pointe des Châteaux)",
+   "ile": "Mer",
+   "secteur": "Saint-François",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Intermédiaire",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Bon spot de snorkeling, mais côte exposée : à faire par mer calme.",
+   "points": [
+    {
+     "nom": "Saint-François",
+     "lat": 16.25,
+     "lon": -61.2,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-snorkel-petite-anse",
+   "nom": "Snorkeling à Petite Anse (sud Basse-Terre, tortues)",
+   "ile": "Mer",
+   "secteur": "Sud Basse-Terre",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Plage de sable noir, eaux calmes, tortues. Position approximative, à vérifier.",
+   "points": [
+    {
+     "nom": "Sud Basse-Terre",
+     "lat": 15.97,
+     "lon": -61.64,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-snorkel-marie-galante",
+   "nom": "Snorkeling à Marie-Galante (Anse Feuillard, plage de Capesterre)",
+   "ile": "Mer",
+   "secteur": "Marie-Galante",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Snorkeling moyen selon snorkeling-report ; tortues possibles côté mangrove.",
+   "points": [
+    {
+     "nom": "Marie-Galante",
+     "lat": 15.9,
+     "lon": -61.22,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-plongee-avion",
+   "nom": "Plongée sur l'épave de l'Avion (Port-Louis, 22 m)",
+   "ile": "Mer",
+   "secteur": "Port-Louis",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Hors sentiers",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Épave d'avion à 22 m couverte de coraux, tortues et raies. Niveau 2 requis, départ en bateau du port. Position approximative.",
+   "points": [
+    {
+     "nom": "Port-Louis",
+     "lat": 16.43,
+     "lon": -61.545,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "mer-plongee-sec-pate",
+   "nom": "Plongée au Sec Paté",
+   "ile": "Mer",
+   "secteur": "Les Saintes / Marie-Galante",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Hors sentiers",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Mont sous-marin pour plongeurs expérimentés. Position approximative, à vérifier avec le club.",
+   "points": [
+    {
+     "nom": "Les Saintes / Marie-Galante",
+     "lat": 15.92,
+     "lon": -61.5,
+     "alt": 0,
+     "role": "objectif"
     }
    ]
   }

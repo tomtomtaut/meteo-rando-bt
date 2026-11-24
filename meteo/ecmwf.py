@@ -66,7 +66,7 @@ def _fetch(points: list[tuple[float, float]], models=MODELS, only=None) -> dict 
         "hourly": ",".join(wanted.values()),
         "timezone": "GMT",
         "past_days": 2,
-        "forecast_days": 5,
+        "forecast_days": 7,   # 7 jours : pour repérer une fenêtre Everesting assez tôt
         "wind_speed_unit": "kmh",
     }
     for model in models:
@@ -108,7 +108,7 @@ def fetch_ensemble(points: list[tuple[float, float]]) -> dict | None:
         "hourly": "precipitation",
         "timezone": "GMT",
         "past_days": 1,
-        "forecast_days": 5,
+        "forecast_days": 7,
     }
     for model in ENS_MODELS:
         try:

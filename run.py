@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from meteo import apprendre, arome, avis, ecmwf, grid, lecture, marine, render, render_map, scoring, situation, sommets, webcams
+from meteo import apprendre, arome, avis, ecmwf, everesting, grid, lecture, marine, render, render_map, scoring, situation, sommets, webcams
 
 log = logging.getLogger("rapport")
 ROOT = Path(__file__).parent
@@ -65,6 +65,8 @@ def load_config():
                     spot.setdefault("_names", {})[i] = f"{p['nom']} ({p['alt']} m)"
     for s in cfg.get("sommets", []):
         s["_i"] = pts.add(s)
+    som = next((s for s in cfg.get("sommets", []) if s["nom"] == "La Soufrière"), None)
+    cfg["_ever"] = ([pts.add(p) for p in everesting.POINTS] + [som["_i"]], som["_i"]) if som else None
     hz = cfg.get("horizons", {})
     idx_h = {k: pts.add(v) for k, v in hz.items() if isinstance(v, dict)}
     return cfg, pts, idx_h
@@ -249,10 +251,11 @@ def main():
             dd, merged, d["situation"].get("wind", float("nan")), idx_h.get("mer_est"), idx_h.get("mer_nord"))
         d["avis"] = avis.day_avis(dd, now, merged, cfg["spots"], d["top"], d["situation"], d["sommets"],
                                   {"ar": ar, "ar_lag": ar_lag, "ec": ec, "ens": ens}, idx_h)
+    ever = everesting.compute(merged, now, *cfg["_ever"], ens) if cfg.get("_ever") else None
     report = {
         "generated": f"{render.fdate(local.date())} à {local.hour}h{local:%M}",
         "sources": sources, "warnings": warnings, "days": days, "spots": cfg["spots"],
-        "exclus": cfg.get("exclus", []), "webcams": webcams.fetch(cfg.get("webcams", [])),
+        "exclus": cfg.get("exclus", []), "webcams": webcams.fetch(cfg.get("webcams", [])), "everesting": ever,
     }
 
     out = Path(args.out)
@@ -275,6 +278,7 @@ def main():
         "spots": [geo(s) for s in cfg["spots"]],
         "webcams": report["webcams"],
         "pepites": render.pepites_list(report),
+        "everesting": ever,
         "days": [{
             "date": d["date"], "title": d["title"], "couverture": d["couverture"],
             "top": [s["id"] for s, _ in d["top"]],

@@ -66,6 +66,9 @@ def page() -> str:
   .kv td { padding:4px 3px; border-bottom:1px solid var(--line); vertical-align:top; }
   .kv td:first-child { width:36%; color:var(--muted); }
   .conf { color:#fff; border-radius:999px; padding:1px 8px; font-size:.75rem; font-weight:600; white-space:nowrap; }
+  .ever { display:block; font-size:.8rem; margin-top:6px; padding:5px 10px; border-radius:10px; border:1px dashed var(--line); color:var(--fg); text-decoration:none; }
+  .ever.on { border:2px solid #f0a500; background:rgba(240,165,0,.14); font-weight:600; }
+  .ev td { font-size:.75rem; padding:3px 2px; border-bottom:1px solid var(--line); vertical-align:top; }
   .camicon { font-size:18px; line-height:22px; text-align:center; background:none; border:0; }
 </style></head>
 <body><div class="app">
@@ -73,6 +76,7 @@ def page() -> str:
   <div class="top"><h1>Où sortir en Guadeloupe</h1>
     <span class="switch"><b>Carte</b> <a href="liste.html">Liste</a> <a href="apprendre.html" title="Apprendre à lire">?</a></span></div>
   <details class="meta"><summary id="meta">Chargement…</summary><span id="sources"></span></details>
+  <div id="ever"></div>
 </header>
 <div class="controls">
   <div class="chips" id="days"></div>
@@ -232,6 +236,17 @@ function panel() {
       `</div><div class="small muted">${r.start ? "Départ " + r.start + " → " + r.end + (r.passe ? " (passé)" : "") + " · " : ""}${(r.reasons || []).join(" · ")}</div></div>`;
   });
   h += "</div>";
+  const ev = D.everesting;
+  if (ev && (ev.jours || []).length) {
+    const f1 = x => x === null || x === undefined ? "—" : String(x).replace(".", ",");
+    h += `<div class="card" id="ev-card"><h3>Everesting à la Soufrière${Q("everesting")}</h3>` +
+      `<p class="small muted">${ev.allers_retours} allers-retours Bains Jaunes ↔ sommet (${ev.dplus_ar} m chacun). Meilleure fenêtre de 24 h par jour de départ.</p><table class="ev">` +
+      ev.jours.map(w => `<tr><td>${w.etoile ? "⭐ " : ""}<b>${w.depart_txt}</b><br><span class="muted">${w.source}</span></td>` +
+        `<td>${f1(w.pluie)} mm · ${w.heures_moderees} h ≥ 2,5 mm/h<br>orage : ${w.orage ? "oui" : "non"}</td>` +
+        `<td>rafales ${f1(w.rafales)} km/h<br>nuit ${f1(w.tmin)} °C · nuage ${w.nuage_h} h</td>` +
+        `<td>${w.scenarios === null ? "—" : w.scenarios + " %"}<br><span class="muted">scén. ≤ ${ev.seuils.pluie} mm</span></td></tr>`).join("") +
+      `</table><p class="small muted">⭐ = pas d'orage, ≤ ${ev.seuils.pluie} mm sur 24 h, aucune heure ≥ 2,5 mm/h, rafales &lt; ${ev.seuils.rafales} km/h, ≥ ${ev.seuils.scenarios} % des scénarios secs (seuils de l'outil). Au-delà de ~2 jours : tendance ECMWF, à confirmer la veille.</p></div>`;
+  }
   if (D.pepites && D.pepites.length) {
     h += `<div class="card"><h3>Les pépites (levers et couchers dégagés ou au-dessus des nuages)</h3><ul class="small">`;
     D.pepites.forEach(p => {
@@ -267,6 +282,13 @@ Promise.all([fetch("grid.json", {cache: "no-store"}).then(r => r.json()),
   G = g; D = d;
   document.getElementById("meta").textContent = `Rapport du ${d.generated} · sources`;
   document.getElementById("sources").textContent = d.sources;
+  const ev = d.everesting;
+  if (ev && (ev.jours || []).length) {
+    const st = ev.etoile, b = ev.meilleure;
+    document.getElementById("ever").innerHTML = st
+      ? `<a class="ever on" href="#ev-card">⭐ Everesting Soufrière : départ ${st.depart_txt} (${String(st.pluie).replace(".", ",")} mm sur 24 h${st.source === "AROME" ? "" : " · tendance"})</a>`
+      : `<a class="ever" href="#ev-card">☆ Everesting : pas encore de fenêtre · la moins mauvaise : départ ${b.depart_txt}</a>`;
+  }
   map = L.map("map", {zoomControl: true}).setView([16.15, -61.42], 10);
   L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {maxZoom: 16,
     attribution: '© OpenStreetMap, SRTM · style © OpenTopoMap (CC-BY-SA)'}).addTo(map);
