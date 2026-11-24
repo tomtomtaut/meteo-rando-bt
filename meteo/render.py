@@ -40,6 +40,28 @@ def chip(r: dict, with_score: bool = True) -> str:
     return f'<span class="chip" style="background:{COLORS.get(lab, "#999")}">{escape(txt)}</span>'
 
 
+CAT_NAMES = {"rando": "Randos", "riviere": "Rivières", "sommet": "Sommets"}
+
+
+def cat_of(spot: dict) -> str:
+    return "riviere" if spot["type"] == "riviere" else ("sommet" if spot.get("_high") else "rando")
+
+
+def rank_card(spot: dict, r: dict, d: dict, i_day: int) -> str:
+    """Carte du mode Classement (une activité pour un jour), avec ses attributs de filtre."""
+    score = -1 if r.get("score") is None else (0 if r.get("nogo") else r["score"])
+    when = (f"Départ {r['start']} → retour vers {r['end']}" if r.get("start") and not r.get("nogo") else "")
+    acces = f'<p class="warn">⚠ {escape(spot["acces"])}</p>' if spot.get("acces") else ""
+    src = {"AROME": "AROME", "mixte": "AROME + ECMWF", "ECMWF-ens": "tendance ECMWF", "ECMWF": "tendance ECMWF"}
+    return f"""
+    <article class="card rk" data-day="{i_day}" data-cat="{cat_of(spot)}" data-score="{score}">
+      <div class="row"><h3>{escape(spot['nom'])}</h3>{chip(r)}</div>
+      <p class="when">{escape(d['title'])}{' · ' + when if when else ''}</p>
+      <p class="small muted">{escape(spot['secteur'])} · {escape(CAT_NAMES[cat_of(spot)])} · {escape(spot['niveau'])} · {escape(src.get(r.get('source'), ''))}</p>
+      <p>{escape(' · '.join(r.get('reasons', [])))}</p>{acces}
+    </article>"""
+
+
 def card(spot: dict, r: dict) -> str:
     acces = f'<p class="warn">⚠ {escape(spot["acces"])}</p>' if spot.get("acces") else ""
     conseil = f'<p class="hint">{escape(spot["conseil"])}</p>' if spot.get("conseil") else ""
@@ -58,7 +80,7 @@ def sommet_row(x: dict) -> str:
         det = hr.get("det") or {}
         tip = f"{hr['h']}h : {lab}" + (f" (nuage {det['cc']} %, humidité {det['rh']} %)" if det.get("cc") is not None else "")
         faded = ' faded' if hr.get("src") == "ECMWF" else ''
-        cells.append(f'<span class="h{faded}" style="background:{col}" title="{escape(tip)}"></span>')
+        cells.append(f'<span class="h{faded}" style="background:{col}" data-tip="{escape(tip)}">{hr["h"]}</span>')
 
     def sun(icon, s):
         mark = '<b class="ok">✓</b>' if s["top"] else '<span class="no">✗</span>'
@@ -71,6 +93,7 @@ def sommet_row(x: dict) -> str:
         <div class="row"><span><b>{escape(x['nom'])}</b> <span class="muted">{x['alt']} m</span></span>
           <span class="small">{sun('🌅', x['lever'])} &nbsp; {sun('🌇', x['coucher'])}</span></div>
         <div class="strip">{''.join(cells)}</div>
+        <p class="small tipline">Survole ou touche une heure pour le détail.</p>
         <p class="small muted">{escape(x['texte'])}{tendance}</p>
       </div>"""
 
@@ -179,6 +202,10 @@ def page(report: dict) -> str:
         rows.append(f"<tr><td class='name'>{escape(spot['nom'])}</td>{''.join(cells)}</tr>")
 
     warn = "".join(f'<p class="bad">{escape(w)}</p>' for w in report["warnings"])
+    day_btns = "".join(f'<button class="chip" data-d="{i}">{escape(d["title"].split(" · ")[0])}</button>'
+                       for i, d in enumerate(report["days"]))
+    cat_btns = "".join(f'<button class="chip" data-c="{k}">{v}</button>' for k, v in CAT_NAMES.items())
+    rank_cards = "".join(rank_card(s, r, d, i) for i, d in enumerate(report["days"]) for s, r in d["all"])
     exclus = "".join(f"<li>{escape(e['nom'])} : {escape(e['raison'])}</li>" for e in report["exclus"])
 
     return f"""<!DOCTYPE html>
@@ -225,12 +252,35 @@ def page(report: dict) -> str:
   .tag.ok {{ color:#1f9d55; }}
   .sit {{ background:var(--card); border-radius:12px; padding:10px 14px; margin:8px 0; font-size:.9rem; }}
   .sit ul {{ margin:.3em 0 0; padding-left:1.1em; }} .sit li {{ margin:.25em 0; }}
+  .strip .h {{ color:#fff; font-size:.62rem; font-weight:600; display:flex; align-items:center; justify-content:center;
+    height:18px; cursor:pointer; text-shadow:0 0 2px rgba(0,0,0,.4); }}
+  .strip .h.sel {{ outline:2px solid var(--fg); }}
+  .tipline {{ min-height:1.2em; color:var(--fg); }}
+  .bar {{ display:flex; flex-direction:column; gap:6px; margin:10px 0; }}
+  .chips {{ display:flex; gap:6px; overflow-x:auto; }}
+  .bar .chip, #views .chip {{ border:1px solid rgba(128,128,128,.3); background:var(--card); color:var(--fg); border-radius:999px;
+    padding:5px 11px; font-size:.85rem; white-space:nowrap; cursor:pointer; font-weight:400; }}
+  .bar .chip.on, #views .chip.on {{ background:#1f6f4a; border-color:#1f6f4a; color:#fff; }}
+  .nav a {{ color:inherit; }}
 </style></head>
 <body><main>
   <p class="nav"><a href="index.html">Carte</a> · <b>Liste</b></p>
   <h1>Où sortir en Basse-Terre</h1>
   <p class="meta">Rapport du {escape(report['generated'])} · {escape(report['sources'])}</p>
   {warn}
+  <div class="bar">
+    <div class="chips" id="views"><button class="chip on" data-v="jour">Par jour</button><button class="chip" data-v="rank">Classement</button></div>
+  </div>
+  <div id="v-rank" hidden>
+    <div class="bar">
+      <div class="chips" id="f-day"><button class="chip on" data-d="all">Tous les jours</button>{day_btns}</div>
+      <div class="chips" id="f-cat"><button class="chip on" data-c="all">Toutes</button>{cat_btns}</div>
+      <label class="small"><input type="checkbox" id="f-hide" checked> masquer « À éviter » et « Non »</label>
+    </div>
+    <p class="small muted" id="rk-count"></p>
+    <div id="rk-list">{rank_cards}</div>
+  </div>
+  <div id="v-jour">
   <h2>Les pépites</h2>
   {pepites(report)}
   {webcams(report)}
@@ -238,6 +288,7 @@ def page(report: dict) -> str:
   {''.join(days_html)}
   <h2>Toutes les activités</h2>
   <div class="table"><table><tr><th></th>{head_cells}</tr>{''.join(rows)}</table></div>
+  </div>
   <footer>
     <h2>Comment c'est calculé, et ce qui reste approximatif</h2>
     <p><b>Modèles.</b> AROME Outre-Mer Antilles (Météo-France, maille 2,5 km) : le seul modèle qui voit le relief de la
@@ -267,5 +318,44 @@ def page(report: dict) -> str:
     et état des sentiers sur <a href="https://www.randoguadeloupe.gp">randoguadeloupe.gp</a>.</p>
     {f'<p>Non proposées :</p><ul>{exclus}</ul>' if exclus else ''}
   </footer>
-</main></body></html>
+</main>
+<script>
+// Bascule Par jour / Classement
+const views = document.querySelectorAll("#views .chip");
+views.forEach(b => b.onclick = () => {{
+  views.forEach(x => x.classList.toggle("on", x === b));
+  document.getElementById("v-rank").hidden = b.dataset.v !== "rank";
+  document.getElementById("v-jour").hidden = b.dataset.v === "rank";
+}});
+// Filtres et tri du classement
+const f = {{d: "all", c: "all"}};
+function apply() {{
+  const hide = document.getElementById("f-hide").checked;
+  const list = document.getElementById("rk-list");
+  const cards = [...list.querySelectorAll(".rk")];
+  cards.sort((a, b) => +b.dataset.score - +a.dataset.score).forEach(c => list.appendChild(c));
+  let n = 0;
+  cards.forEach(c => {{
+    const ok = (f.d === "all" || c.dataset.day === f.d) && (f.c === "all" || c.dataset.cat === f.c)
+      && !(hide && +c.dataset.score < 35);
+    c.hidden = !ok; if (ok) n++;
+  }});
+  document.getElementById("rk-count").textContent = n + " résultat" + (n > 1 ? "s" : "") + ", du mieux noté au moins bien noté";
+}}
+document.querySelectorAll("#f-day .chip").forEach(b => b.onclick = () => {{
+  document.querySelectorAll("#f-day .chip").forEach(x => x.classList.toggle("on", x === b)); f.d = b.dataset.d; apply(); }});
+document.querySelectorAll("#f-cat .chip").forEach(b => b.onclick = () => {{
+  document.querySelectorAll("#f-cat .chip").forEach(x => x.classList.toggle("on", x === b)); f.c = b.dataset.c; apply(); }});
+document.getElementById("f-hide").onchange = apply;
+apply();
+// Détail d'une heure sur les barres des sommets (survol ou toucher)
+document.querySelectorAll(".srow").forEach(row => {{
+  const line = row.querySelector(".tipline");
+  row.querySelectorAll(".strip .h").forEach(c => {{
+    const show = () => {{ row.querySelectorAll(".strip .h").forEach(x => x.classList.toggle("sel", x === c)); line.textContent = c.dataset.tip; }};
+    c.onmouseenter = show; c.onclick = show;
+  }});
+}});
+</script>
+</body></html>
 """
