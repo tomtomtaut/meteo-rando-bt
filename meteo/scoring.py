@@ -224,7 +224,7 @@ def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None =
         score = 0.6 * mean_s + 0.4 * min_s
         base_score = score
         nogo, reasons, ajust = False, [], []
-        p24 = up_sum = None
+        p24 = up_sum = up_win = None
 
         rain_win = sum(e[1]["rain"] for e in evals)
         if spot["type"] == "riviere" or spot.get("riviere_partielle"):
@@ -292,9 +292,29 @@ def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None =
         for e in evals:
             for k, v in (e[1].get("pens") or {}).items():
                 pens_mean[k] = pens_mean.get(k, 0) + v / dur
+        def brut(k, e, ti):
+            """Données de l'heure, adaptées au type d'activité (arrondies)."""
+            r_ = lambda x, n=0: None if x is None or (isinstance(x, float) and math.isnan(x)) else round(x, n)  # noqa: E731
+            out = {"pluie": r_(e["rain"], 1), "proba": None if e.get("prob") is None else round(100 * e["prob"]),
+                   "rafales": r_(e.get("gust")), "vent": r_(e.get("ws")), "src": m.source[ti]}
+            if spot["type"] == "mer":
+                out.update({"creux": r_(e.get("hs"), 1), "houle": r_(e.get("sw"), 1), "periode": r_(e.get("per")),
+                            "dir": r_(e.get("dir"))})
+            else:
+                out.update({"t2m": r_(e.get("t2m")), "nuages_bas": r_(e.get("lcc")), "cape": r_(e.get("cape")),
+                            "orage": bool(e.get("storm"))})
+                if spot.get("_high"):
+                    names = spot.get("_names", {})
+                    out["points_hauts"] = [{"nom": names.get(i, "sommet"),
+                                            "etat": (m.summit_state.get((i, m.times[ti])) or (None,))[0]}
+                                           for i in spot.get("_obj_high", [])]
+                if up_win is not None:
+                    out["amont"] = r_(up_win[k], 1)
+            return out
+
         detail = {
-            "heures": [{"h": start + k, "score": round(sc), "pens": e[1].get("pens", {})}
-                       for k, (sc, e) in enumerate(zip(scores, evals))],
+            "heures": [{"h": start + k, "score": round(sc), "pens": e[1].get("pens", {}), "brut": brut(k, e[1], ti)}
+                       for k, (sc, e, ti) in enumerate(zip(scores, evals, tis))],
             "moyenne": round(mean_s), "pire_h": start + k_worst, "pire": round(min_s),
             "pens_moy": {PEN_LABELS[k]: round(v, 1) for k, v in sorted(pens_mean.items(), key=lambda x: -x[1])},
             "pens_pire": {PEN_LABELS[k]: v for k, v in (evals[k_worst][1].get("pens") or {}).items()},

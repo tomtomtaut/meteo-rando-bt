@@ -58,11 +58,11 @@ def rank_card(spot: dict, r: dict, d: dict, i_day: int) -> str:
     acces = f'<p class="warn">⚠ {escape(spot["acces"])}</p>' if spot.get("acces") else ""
     src = {"AROME": "AROME", "mixte": "AROME + ECMWF", "ECMWF-ens": "tendance ECMWF", "ECMWF": "tendance ECMWF"}
     return f"""
-    <article class="card rk" data-day="{i_day}" data-cat="{cat_of(spot)}" data-ile="{escape(spot.get('ile', ''))}" data-score="{score}">
+    <article class="card rk" data-id="{escape(spot['id'])}" data-day="{i_day}" data-cat="{cat_of(spot)}" data-ile="{escape(spot.get('ile', ''))}" data-score="{score}">
       <div class="row"><h3>{escape(spot['nom'])}</h3>{chip(r)}</div>
       <p class="when">{escape(d['title'])}{' · ' + when if when else ''}</p>
       <p class="small muted">{escape(spot.get('ile', ''))} · {escape(spot['secteur'])} · {escape(CAT_NAMES[cat_of(spot)])} · {escape(spot['niveau'])} · {escape(src.get(r.get('source'), ''))}</p>
-      <p>{escape(' · '.join(r.get('reasons', [])))}</p>{acces}{explain(r)}
+      <p>{escape(' · '.join(r.get('reasons', [])))}</p>{acces}{explain(r, spot)}
     </article>"""
 
 
@@ -100,8 +100,63 @@ def avis_html(a: dict | None) -> str:
     </div>"""
 
 
-def explain(r: dict) -> str:
-    """Bloc dépliable : chiffres clés avec leur lecture, puis détail du calcul du score."""
+def _n(x, nd=0) -> str:
+    if x is None:
+        return "—"
+    return (f"{x:.{nd}f}" if nd else f"{x:.0f}").replace(".", ",")
+
+
+ETATS_COURTS = {"degage": "dégagé", "mer": "au-dessus", "incertain": "incertain", "nuage": "nuage", None: "—"}
+
+
+def hours_table(spot: dict | None, r: dict) -> str:
+    """Tableau heure par heure du créneau, avec les données qui comptent pour ce type d'activité."""
+    from .mer import dir_name
+    from .scoring import PEN_LABELS
+    d = r.get("detail") or {}
+    hs = [h for h in d.get("heures", []) if h.get("brut")]
+    if not hs or spot is None:
+        return ""
+    cat = cat_of(spot)
+    pluie = lambda b: _n(b.get("pluie"), 1) + (f" ({b['proba']} %)" if b.get("proba") else "")  # noqa: E731
+    cols = {
+        "rando": [("Pluie mm/h", pluie, "pluie"), ("Rafales", lambda b: _n(b.get("rafales")), "vent"),
+                  ("Vent", lambda b: _n(b.get("vent")), "vent"), ("°C", lambda b: _n(b.get("t2m")), "chaleur"),
+                  ("Nuages bas", lambda b: _n(b.get("nuages_bas")) + " %", "couche")],
+        "riviere": [("Pluie mm/h", pluie, "pluie"), ("Amont mm/h", lambda b: _n(b.get("amont"), 1), "riviere"),
+                    ("Rafales", lambda b: _n(b.get("rafales")), "vent"), ("°C", lambda b: _n(b.get("t2m")), "chaleur")],
+        "mer": [("Creux m", lambda b: _n(b.get("creux"), 1), "mer"), ("Vent", lambda b: _n(b.get("vent")), "vent"),
+                ("Rafales", lambda b: _n(b.get("rafales")), "vent"), ("Pluie", pluie, "pluie")],
+        "surf": [("Houle m", lambda b: _n(b.get("houle"), 1), "houle"), ("Période s", lambda b: _n(b.get("periode")), "houle"),
+                 ("Direction", lambda b: dir_name(b["dir"]) if b.get("dir") is not None else "—", "houle"),
+                 ("Vent", lambda b: _n(b.get("vent")), "vent")],
+        "kite": [("Vent km/h (nds)", lambda b: _n(b.get("vent")) + (f" ({b['vent'] / 1.852:.0f})" if b.get("vent") else ""), "kite"),
+                 ("Rafales", lambda b: _n(b.get("rafales")), "vent"),
+                 ("Écart", lambda b: _n(b["rafales"] - b["vent"]) if b.get("rafales") is not None and b.get("vent") is not None else "—", "kite"),
+                 ("Pluie", pluie, "pluie")],
+    }
+    c = cols.get(cat, cols["rando"]) if cat != "sommet" else cols["rando"] + [
+        ("Points hauts", lambda b: ", ".join(f"{p['nom'].split(' (')[0]} : {ETATS_COURTS.get(p['etat'], p['etat'])}"
+                                             for p in b.get("points_hauts", [])) or "—", "sommet")]
+    head = "".join(f"<th>{escape(t)}{q(a)}</th>" for t, _, a in c)
+    rows = "".join(
+        f"<tr><td>{h['h']}h</td><td><b>{h['score']}</b></td>" + "".join(f"<td>{escape(fn(h['brut']))}</td>" for _, fn, _ in c)
+        + f"<td>{escape(', '.join(f'{PEN_LABELS.get(k, k)} −{v:g}' for k, v in h['pens'].items()) or '—')}</td>"
+        + f"<td><small>{escape('AROME' if h['brut'].get('src') == 'AROME' else 'ECMWF')}</small></td></tr>" for h in hs)
+    extra = ""
+    if cat == "surf" and spot.get("houle"):
+        a_, b_ = spot["houle"]
+        extra = f'<p class="small muted">Houle qui convient à ce spot : de {dir_name(a_)} à {dir_name(b_)} ({a_}° à {b_}°).</p>'
+    if cat == "riviere" and (r.get("mesures") or {}).get("pluie_amont_24h") is not None:
+        extra = (f'<p class="small muted">Pluie en amont sur les 24 h avant le départ : '
+                 f'{_n(r["mesures"]["pluie_amont_24h"], 1)} mm{q("riviere")}</p>')
+    return (f'<p class="small"><b>Heure par heure</b> <span class="muted">(vent et rafales en km/h)</span></p>'
+            f'<div class="table"><table class="hh"><tr><th>h</th><th>Note</th>{head}<th>Retiré</th><th>Modèle</th></tr>'
+            f'{rows}</table></div>{extra}')
+
+
+def explain(r: dict, spot: dict | None = None) -> str:
+    """Bloc dépliable : chiffres clés avec leur lecture, heure par heure, puis détail du calcul du score."""
     d = r.get("detail")
     if not d:
         return ""
@@ -116,6 +171,7 @@ def explain(r: dict) -> str:
     return f"""
       <details class="expl"><summary>Chiffres, lecture et détail du score</summary>
         {f'<p class="small"><b>Chiffres clés et ce qu’ils veulent dire</b></p><ul class="small">{lect}</ul>' if lect else ''}
+        {hours_table(spot, r)}
         <p class="small"><b>Calcul du score</b>{q("score")}</p>
         <ul class="small">
           <li>Chaque heure part de 100, moins des pénalités. Heure par heure : {escape(heures)}
@@ -138,7 +194,7 @@ def card(spot: dict, r: dict) -> str:
     <article class="card">
       <div class="row"><h3>{escape(spot['nom'])}</h3>{chip(r)}</div>
       <p class="when">Départ {r['start']} → retour vers {r['end']}{' <span class="tag">créneau passé</span>' if r.get('passe') else ''} · <span class="muted">{escape(spot['secteur'])}</span></p>
-      <p>{escape(' · '.join(r['reasons']))}</p>{conseil}{acces}{explain(r)}
+      <p>{escape(' · '.join(r['reasons']))}</p>{conseil}{acces}{explain(r, spot)}
     </article>"""
 
 
@@ -152,7 +208,9 @@ def sommet_row(x: dict) -> str:
             haut = "pas de plafond net" if det.get("haut") == 9999 else (f"~{det['haut']:.0f} m" if det.get("haut") is not None else "?")
             tip += f" · couche nuageuse : base ~{det['base']:.0f} m, haut {haut}"
         faded = ' faded' if hr.get("src") == "ECMWF" else ''
-        cells.append(f'<span class="h{faded}" style="background:{col}" data-tip="{escape(tip)}">{hr["h"]}</span>')
+        why = "\n".join(hr.get("why") or [])
+        cells.append(f'<span class="h{faded}" style="background:{col}" data-tip="{escape(tip)}" '
+                     f'data-why="{escape(why)}">{hr["h"]}</span>')
 
     def sun(icon, s):
         mark = (f'<b class="ok">✓</b> <span class="muted">{VUE.get(s["etat"], "")}</span>' if s["top"]
@@ -166,7 +224,7 @@ def sommet_row(x: dict) -> str:
         <div class="row"><span><b>{escape(x['nom'])}</b> <span class="muted">{x['alt']} m</span></span>
           <span class="small">{sun('🌅', x['lever'])} &nbsp; {sun('🌇', x['coucher'])}</span></div>
         <div class="strip">{''.join(cells)}</div>
-        <p class="small tipline">Survole ou touche une heure pour le détail.</p>
+        <div class="small tipline">Touche une heure pour savoir pourquoi elle a cette couleur.</div>
         <p class="small muted">{escape(x['texte'])}{tendance}</p>
       </div>"""
 
@@ -329,7 +387,7 @@ def page(report: dict) -> str:
             sc = -1 if r.get("score") is None else (0 if r.get("nogo") else r["score"])
             attrs.append(f'data-s{k}="{sc}"')
             start = f"<br><small>{r['start']}</small>" if r.get("start") and not r.get("nogo") else ""
-            cells.append(f"<td>{chip(r)}{start}</td>")
+            cells.append(f'<td class="cell" data-id="{escape(spot["id"])}" data-k="{k}">{chip(r)}{start}</td>')
         rows.append(f'<tr class="tr" data-cat="{cat_of(spot)}" data-ile="{escape(spot.get("ile", ""))}" {" ".join(attrs)}>'
                     f"<td class='name'>{escape(spot['nom'])}<br><small class='muted'>{escape(spot.get('ile', ''))}"
                     f" · {escape(CAT_NAMES[cat_of(spot)])}</small></td>{''.join(cells)}</tr>")
@@ -391,7 +449,8 @@ def page(report: dict) -> str:
   .strip .h {{ color:#fff; font-size:.62rem; font-weight:600; display:flex; align-items:center; justify-content:center;
     height:18px; cursor:pointer; text-shadow:0 0 2px rgba(0,0,0,.4); }}
   .strip .h.sel {{ outline:2px solid var(--fg); }}
-  .tipline {{ min-height:1.2em; color:var(--fg); }}
+  .tipline {{ min-height:1.2em; color:var(--fg); }} .tipline ul {{ margin:.3em 0; padding-left:1.1em; }}
+  .tipline li {{ margin:.2em 0; }}
   .bar {{ display:flex; flex-direction:column; gap:6px; margin:10px 0; }}
   .chips {{ display:flex; gap:6px; overflow-x:auto; }}
   .bar .chip, #views .chip {{ border:1px solid rgba(128,128,128,.3); background:var(--card); color:var(--fg); border-radius:999px;
@@ -411,6 +470,10 @@ def page(report: dict) -> str:
     border-radius:12px; padding:8px 12px; margin:8px 0; font-size:.9rem; }}
   .ever.on {{ border:2px solid #f0a500; background:rgba(240,165,0,.12); font-weight:600; }}
   table.ev td, table.ev th {{ text-align:left; font-size:.8rem; }} tr.star td {{ background:rgba(240,165,0,.15); }}
+  table.hh {{ font-size:.75rem; }} table.hh td, table.hh th {{ padding:3px 4px; white-space:nowrap; }}
+  td.cell {{ cursor:pointer; }} tr.fiche > td {{ text-align:left; background:rgba(128,128,128,.06); padding:0; }}
+  tr.fiche > td > .card {{ position:sticky; left:0; width:min(720px, calc(100vw - 40px)); margin:6px 0; }}
+  tr.fiche .card td, tr.fiche .card th {{ text-align:left; }}
   .expl {{ margin-top:6px; }} .expl summary {{ color:#1f6f4a; font-size:.85rem; }}
   .expl ul {{ padding-left:1.1em; margin:.3em 0; }} .expl li {{ margin:.25em 0; }}
 </style></head>
@@ -444,7 +507,8 @@ def page(report: dict) -> str:
   <div class="bar">
     <div class="chips" id="t-cat"><button class="chip on" data-c="all">Toutes</button>{cat_btns}</div>
     <div class="chips" id="t-ile"><button class="chip on" data-i="all">Toutes les îles</button>{ile_btns}</div>
-    <p class="small muted">Touche un jour dans l'en-tête du tableau pour trier du mieux noté au moins bien noté.</p>
+    <p class="small muted">Touche un jour dans l'en-tête pour trier du mieux noté au moins bien noté ; touche une
+    note pour voir tout le détail (créneau, chiffres, heure par heure, calcul).</p>
   </div>
   <div class="table"><table id="tbl"><tr><th>Activité</th>{head_cells}</tr>{''.join(rows)}</table></div>
   </div>
@@ -525,6 +589,7 @@ apply();
 // Tableau « Toutes les activités » : filtres et tri par jour
 const t = {{c: "all", i: "all", k: null}};
 function applyTable() {{
+  document.querySelectorAll("#tbl tr.fiche").forEach(x => x.remove());
   const tbl = document.getElementById("tbl"), rows = [...tbl.querySelectorAll("tr.tr")];
   if (t.k !== null) rows.sort((a, b) => +b.dataset["s" + t.k] - +a.dataset["s" + t.k]).forEach(r => tbl.appendChild(r));
   rows.forEach(r => r.hidden = !((t.c === "all" || r.dataset.cat === t.c) && (t.i === "all" || r.dataset.ile === t.i)));
@@ -536,12 +601,33 @@ document.querySelectorAll("#t-ile .chip").forEach(b => b.onclick = () => {{
   document.querySelectorAll("#t-ile .chip").forEach(x => x.classList.toggle("on", x === b)); t.i = b.dataset.i; applyTable(); }});
 document.querySelectorAll("#tbl th.sortable").forEach(h => h.onclick = () => {{ t.k = +h.dataset.k; applyTable(); }});
 t.k = 0; applyTable();
+// Fiche complète d'une activité pour un jour : on réutilise la carte du classement
+document.querySelectorAll("#tbl td.cell").forEach(td => td.onclick = () => {{
+  const tr = td.parentElement, open = tr.nextElementSibling;
+  const same = open && open.classList.contains("fiche") && open.dataset.key === td.dataset.id + td.dataset.k;
+  document.querySelectorAll("#tbl tr.fiche").forEach(x => x.remove());
+  if (same) return;
+  const src = document.querySelector(`.rk[data-id="${{td.dataset.id}}"][data-day="${{td.dataset.k}}"]`);
+  if (!src) return;
+  const row = document.createElement("tr"); row.className = "fiche"; row.dataset.key = td.dataset.id + td.dataset.k;
+  const cell = document.createElement("td"); cell.colSpan = tr.children.length;
+  const card = src.cloneNode(true); card.hidden = false; card.querySelectorAll("details").forEach(d => d.open = true);
+  cell.appendChild(card); row.appendChild(cell); tr.after(row);
+}});
 // Détail d'une heure sur les barres des sommets (survol ou toucher)
 document.querySelectorAll(".srow").forEach(row => {{
   const line = row.querySelector(".tipline");
   row.querySelectorAll(".strip .h").forEach(c => {{
-    const show = () => {{ row.querySelectorAll(".strip .h").forEach(x => x.classList.toggle("sel", x === c)); line.textContent = c.dataset.tip; }};
-    c.onmouseenter = show; c.onclick = show;
+    const show = () => {{
+      row.querySelectorAll(".strip .h").forEach(x => x.classList.toggle("sel", x === c));
+      line.innerHTML = "";
+      const head = document.createElement("b"); head.textContent = c.dataset.tip.split(" · ")[0].split(" (")[0]; line.appendChild(head);
+      const ul = document.createElement("ul");
+      (c.dataset.why || "").split("\\n").filter(Boolean).forEach(t => {{ const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); }});
+      line.appendChild(ul);
+      const a = document.createElement("a"); a.href = "apprendre.html#sommet"; a.className = "q"; a.textContent = "?"; line.appendChild(a);
+    }};
+    c.onclick = show;
   }});
 }});
 </script>

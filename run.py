@@ -271,7 +271,7 @@ def main():
         return {"id": spot["id"], "nom": spot["nom"], "cat": cat, "type": spot["type"], "ile": spot.get("ile", ""),
                 "lat": p["lat"],
                 "lon": p["lon"], "secteur": spot["secteur"], "niveau": spot["niveau"],
-                "acces": spot.get("acces", ""), "conseil": spot.get("conseil", "")}
+                "acces": spot.get("acces", ""), "conseil": spot.get("conseil", ""), "houle": spot.get("houle")}
 
     compact = {
         "generated_utc": now.isoformat(), "generated": report["generated"], "sources": sources, "warnings": warnings,
@@ -288,11 +288,12 @@ def main():
             "situation": d["situation"], "avis": d["avis"],
             "sommets": {x["nom"]: {"etats": {h["h"]: h["state"] for h in x["hours"]},
                                    "details": {h["h"]: h["det"] for h in x["hours"]},
+                                   "pourquoi": {h["h"]: h.get("why") for h in x["hours"]},
                                    "lever": x["lever"], "coucher": x["coucher"], "texte": x["texte"]}
                         for x in d["sommets"]},
         } for d in days],
     }
-    (out / "data.json").write_text(json.dumps(clean(compact), ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    (out / "data.json").write_text(json.dumps(clean(compact), ensure_ascii=False, separators=(",", ":"), default=str), encoding="utf-8")
     (out / "debug.json").write_text(json.dumps(clean(debug), ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     if args.history:
         h = Path(args.history)

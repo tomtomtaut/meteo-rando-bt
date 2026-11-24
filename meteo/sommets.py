@@ -160,16 +160,23 @@ def cloud_layer(prof: dict | None, merged, ti: int, i_up: int) -> tuple[float, f
     return base, top
 
 
-def state_from_layer(alt: float, base: float, top: float, model_state: str | None) -> str | None:
-    if model_state == "nuage" or math.isnan(base) or math.isnan(top):
-        return model_state
+def layer_rule(alt: float, base: float, top: float, model_state: str | None) -> tuple[str | None, str]:
+    """(état, règle qui a décidé). Règles : profil_nuage, sans_couche, sous_base, dans_couche, limite_haut, au_dessus."""
+    if model_state == "nuage":
+        return model_state, "profil_nuage"
+    if math.isnan(base) or math.isnan(top):
+        return model_state, "sans_couche"
     if alt < base - MARGE_BASE:
-        return model_state if model_state in ("incertain",) else "degage"   # sous la base des nuages
+        return (model_state if model_state in ("incertain",) else "degage"), "sous_base"
     if alt <= top - MARGE_HAUT:
-        return "nuage"                                                       # dans le nuage orographique
+        return "nuage", "dans_couche"
     if alt < top + MARGE_HAUT:
-        return "incertain"                                                   # à la limite du haut de la couche
-    return "mer"                                                             # au-dessus de la couche
+        return "incertain", "limite_haut"
+    return "mer", "au_dessus"
+
+
+def state_from_layer(alt: float, base: float, top: float, model_state: str | None) -> str | None:
+    return layer_rule(alt, base, top, model_state)[0]
 
 
 def compute_states(points_alt: dict[int, float], profiles: dict, merged, i_windward: int | None,
@@ -185,15 +192,18 @@ def compute_states(points_alt: dict[int, float], profiles: dict, merged, i_windw
             if prof is not None:
                 st, det = state_from_profile(prof, i, alt, i_windward)
                 if st is not None:
-                    st = state_from_layer(alt, base, top, st)
+                    st_p = st
+                    st, regle = layer_rule(alt, base, top, st)
                     det = {**det, "base": None if math.isnan(base) else round(base, -1),
-                           "haut": None if math.isnan(top) else (9999 if math.isinf(top) else round(top, -1))}
+                           "haut": None if math.isnan(top) else (9999 if math.isinf(top) else round(top, -1)),
+                           "regle": regle, "profil": st_p, "alt": round(alt)}
                     out[(i, t)] = (st, det, "AROME")
                     continue
             rh850 = float(merged.data["rh850"][ti, i]) if "rh850" in merged.data else float("nan")
             lcc = float(merged.data["lcc"][ti, i]) if "lcc" in merged.data else float("nan")
             st = state_from_surface(rh850, lcc)
-            out[(i, t)] = (st, {}, "ECMWF")
+            out[(i, t)] = (st, {"regle": "ecmwf", "rh850": None if math.isnan(rh850) else round(rh850),
+                                "lcc": None if math.isnan(lcc) else round(lcc)}, "ECMWF")
     return out
 
 
@@ -213,14 +223,83 @@ def _hm(dt: datetime) -> str:
     return f"{loc.hour}h{loc:%M}"
 
 
+def _meteo_hour(merged, i: int, t: datetime) -> dict:
+    """Pluie, rafales, vent et température à un point pour l'heure qui commence à t."""
+    from . import scoring
+    ti = merged.index.get(t)
+    if ti is None:
+        return {}
+    rain, prob = scoring.rain_stats(merged, scoring.rain_index(merged, ti), [i], scoring.RAIN_PCTL)
+    g = lambda k: (None if k not in merged.data or math.isnan(merged.data[k][ti, i])  # noqa: E731
+                   else round(float(merged.data[k][ti, i])))
+    return {"pluie": round(rain, 1), "proba": None if prob is None else round(100 * prob),
+            "rafales": g("gust"), "vent": g("ws10"), "t2m": g("t2m")}
+
+
+def why(state: str | None, det: dict, alt: float, met: dict) -> list[str]:
+    """Pourquoi cette couleur : les règles dans l'ordre où l'outil les applique, avec les chiffres de l'heure."""
+    from . import lecture
+    det = det or {}
+    out, regle = [], det.get("regle")
+    nom = STATES.get(state, STATES[None])[0].lower()
+    if regle == "ecmwf":
+        out.append(f"Au-delà d'AROME, règle de secours ECMWF (maille ~9-25 km) : humidité vers 1 500 m "
+                   f"{det.get('rh850', '?')} %, nuages bas {det.get('lcc', '?')} %. Dans le nuage si ≥ 85 % ou ≥ 70 % ; "
+                   f"dégagé si < 65 % et < 30 % ; sinon incertain → {nom} (tendance).")
+    elif regle:
+        cc, rh = det.get("cc"), det.get("rh")
+        out.append(f"1. Modèle AROME à {alt:.0f} m : nuage {cc if cc is not None else '?'} % (seuil {CLOUD_IN} %), "
+                   f"humidité {rh if rh is not None else '?'} % (seuil {RH_IN} %)"
+                   + (" → dépasse un seuil : dans le nuage. Cette règle passe avant la couche." if regle == "profil_nuage"
+                      else " → sous les seuils, on regarde la couche d'alizé."))
+        base, haut = det.get("base"), det.get("haut")
+        if regle == "sans_couche":
+            out.append(f"2. Couche d'alizé non déterminée à cette heure : on garde l'état du modèle ({nom}).")
+        elif regle != "profil_nuage":
+            hs = "pas de haut net" if haut == 9999 else f"haut ~{haut:.0f} m"
+            if regle == "sous_base":
+                pos = f"sommet sous la base ({alt:.0f} m < {base:.0f} − {MARGE_BASE} m) : sous les nuages"
+            elif regle == "dans_couche":
+                pos = (f"sommet entre la base et le haut − {MARGE_HAUT} m ({haut - alt:.0f} m sous le haut) : "
+                       "dans le nuage accroché au relief" if haut != 9999 else "air humide sans plafond : dans le nuage")
+            elif regle == "limite_haut":
+                pos = f"sommet à {abs(alt - haut):.0f} m du haut (marge ±{MARGE_HAUT} m) : incertain"
+            else:
+                pos = f"sommet {alt - haut:.0f} m au-dessus du haut (marge {MARGE_HAUT} m) : au-dessus des nuages"
+            out.append(f"2. Couche d'alizé (air en mer, à l'est) : base ~{base:.0f} m, {hs} ; {pos}.")
+        if state in ("degage", "mer") and regle not in ("au_dessus",):
+            dessous = det.get("dessous")
+            if dessous is not None:
+                out.append(f"3. Nuages plus bas côté au vent : {dessous} % (seuil {SEA_OF_CLOUDS} %) → "
+                           + ("mer de nuages sous le sommet." if state == "mer" else "pas de mer de nuages, ciel dégagé."))
+    if met:
+        p = met.get("pluie")
+        txt = []
+        if p is not None:
+            txt.append(f"pluie {str(p).replace('.', ',')} mm → {lecture.pluie_h(p)} (AMS)"
+                       + (f", risque d'averse {met['proba']} %" if met.get("proba") else ""))
+        if met.get("rafales") is not None:
+            txt.append(f"rafales {met['rafales']} km/h (pointes)")
+        if met.get("vent") is not None:
+            f, l = lecture.beaufort(met["vent"])
+            txt.append(f"vent moyen {met['vent']} km/h → force {f}, {l}")
+        if met.get("t2m") is not None:
+            txt.append(f"{met['t2m']} °C")
+        if txt:
+            out.append("Au sommet à cette heure : " + " · ".join(txt) + ".")
+    return out
+
+
 def day_summary(sommet: dict, i: int, states: dict, merged, d: date, i_east, i_west) -> dict:
     rise, sset = sun_times(d, sommet["lat"], sommet["lon"], sommet["alt"])
     hours = []
     for h in range(FIRST_H, LAST_H + 1):
         t = datetime(d.year, d.month, d.day, h, tzinfo=TZ).astimezone(timezone.utc)
         st = states.get((i, t))
+        met = _meteo_hour(merged, i, t)
         hours.append({"h": h, "state": st[0] if st else None, "src": st[2] if st else None,
-                      "det": st[1] if st else {}})
+                      "det": st[1] if st else {}, "met": met,
+                      "why": why(st[0] if st else None, st[1] if st else {}, sommet["alt"], met)})
 
     def at(dt):
         t = (dt + timedelta(minutes=30)).replace(minute=0, second=0, microsecond=0)

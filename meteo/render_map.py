@@ -69,6 +69,7 @@ def page() -> str:
   .ever { display:block; font-size:.8rem; margin-top:6px; padding:5px 10px; border-radius:10px; border:1px dashed var(--line); color:var(--fg); text-decoration:none; }
   .ever.on { border:2px solid #f0a500; background:rgba(240,165,0,.14); font-weight:600; }
   .ev td { font-size:.75rem; padding:3px 2px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .hh { border-collapse:collapse; font-size:.7rem; margin:3px 0 6px; } .hh td, .hh th { padding:2px 3px; border-bottom:1px solid var(--line); white-space:nowrap; text-align:left; }
   .camicon { font-size:18px; line-height:22px; text-align:center; background:none; border:0; }
 </style></head>
 <body><div class="app">
@@ -163,6 +164,33 @@ function cellText(i) {
     ` (${c.kind === "mer" ? "5,5 km, modèle de vagues" : "maille AROME 2,5 km"})</span>`;
 }
 
+const DIRS = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
+const dirName = d => d === null || d === undefined ? "—" : DIRS[Math.floor(((d % 360) + 22.5) / 45) % 8];
+const ETC = {degage: "dégagé", mer: "au-dessus", incertain: "incertain", nuage: "nuage"};
+function hoursTable(sp, r) {
+  const hs = ((r.detail || {}).heures || []).filter(h => h.brut);
+  if (!hs.length) return "";
+  const n = (x, d = 0) => x === null || x === undefined ? "—" : Number(x).toFixed(d).replace(".", ",");
+  const pluie = b => n(b.pluie, 1) + (b.proba ? ` (${b.proba} %)` : "");
+  const C = {
+    rando: [["Pluie", pluie, "pluie"], ["Raf.", b => n(b.rafales), "vent"], ["Vent", b => n(b.vent), "vent"], ["°C", b => n(b.t2m), "chaleur"], ["Nuages bas", b => n(b.nuages_bas) + " %", "couche"]],
+    riviere: [["Pluie", pluie, "pluie"], ["Amont", b => n(b.amont, 1), "riviere"], ["Raf.", b => n(b.rafales), "vent"]],
+    mer: [["Creux", b => n(b.creux, 1), "mer"], ["Vent", b => n(b.vent), "vent"], ["Raf.", b => n(b.rafales), "vent"], ["Pluie", pluie, "pluie"]],
+    surf: [["Houle", b => n(b.houle, 1), "houle"], ["Pér.", b => n(b.periode), "houle"], ["Dir.", b => dirName(b.dir), "houle"], ["Vent", b => n(b.vent), "vent"]],
+    kite: [["Vent (nds)", b => n(b.vent) + (b.vent ? ` (${Math.round(b.vent / 1.852)})` : ""), "kite"], ["Raf.", b => n(b.rafales), "vent"],
+           ["Écart", b => b.rafales !== null && b.vent !== null && b.rafales !== undefined && b.vent !== undefined ? n(b.rafales - b.vent) : "—", "kite"], ["Pluie", pluie, "pluie"]],
+  };
+  let c = C[sp.cat] || C.rando;
+  if (sp.cat === "sommet") c = C.rando.concat([["Points hauts", b => (b.points_hauts || []).map(p => p.nom.split(" (")[0] + " : " + (ETC[p.etat] || "—")).join(", ") || "—", "sommet"]]);
+  let t = `<b>Heure par heure</b> <span class="muted">(km/h)</span><table class="hh"><tr><th>h</th><th>Note</th>` +
+    c.map(([l, , a]) => `<th>${l}${Q(a)}</th>`).join("") + `<th>Retiré</th></tr>`;
+  hs.forEach(h => { t += `<tr><td>${h.h}h</td><td><b>${h.score}</b></td>` + c.map(([, f]) => `<td>${f(h.brut)}</td>`).join("") +
+    `<td>${Object.entries(h.pens).map(([k, v]) => (G.pen_labels[k] || k) + " −" + v).join(", ") || "—"}</td></tr>`; });
+  t += `</table>`;
+  if (sp.cat === "surf" && sp.houle) t += `<span class="small muted">Houle qui convient : de ${dirName(sp.houle[0])} à ${dirName(sp.houle[1])}.</span><br>`;
+  return t;
+}
+
 function spotText(sp) {
   const r = D.days[state.day].scores[sp.id] || {};
   const pill = r.score === null || r.score === undefined ? "" :
@@ -174,6 +202,7 @@ function spotText(sp) {
     (sp.acces ? `<span class="warn">⚠ ${sp.acces}</span><br>` : "") +
     (r.lecture && r.lecture.length ? `<b>Chiffres et lecture</b><ul class="small">${r.lecture.map(x =>
       typeof x === "string" ? `<li>${x}</li>` : `<li>${x.t}${Q(x.aide)}</li>`).join("")}</ul>` : "") +
+    hoursTable(sp, r) +
     (r.detail ? `<b>Calcul</b>${Q("score")}<br><span class="small">Créneau = 0,6 × moyenne (${r.detail.moyenne}) + 0,4 × pire heure ` +
       `(${r.detail.pire_h}h : ${r.detail.pire}) = ${r.detail.creneau}` +
       r.detail.ajustements.map(a => `<br>${a.raison} ${a.points === null ? "→ 0" : a.points}`).join("") +
@@ -301,7 +330,7 @@ Promise.all([fetch("grid.json", {cache: "no-store"}).then(r => r.json()),
   });
   d.spots.forEach(sp => {
     const m = L.circleMarker([sp.lat, sp.lon], {radius: 8, weight: 2, color: "#fff", fillOpacity: 1});
-    m.bindPopup(() => spotText(sp), {maxWidth: 320, maxHeight: 380});
+    m.bindPopup(() => spotText(sp), {maxWidth: 360, maxHeight: 420});
     markers.push({m, sp});
   });
   (d.webcams || []).filter(w => w.lat && w.lon).forEach(w => {
