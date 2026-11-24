@@ -1,0 +1,882 @@
+{
+  "_info": "Activités « À faire » de la fiche Activités Guadeloupe — TTL (Basse-Terre, terre et rivière). Coordonnées approximatives (précision ~500 m), à corriger si besoin. type : sommet | rando | riviere | littoral | itinerance. role : objectif (là où on est) | amont (bassin versant, pour les crues).",
+  "spots": [
+    {
+      "id": "soufriere-echelle",
+      "nom": "La Soufrière par l'Échelle (boucle)",
+      "secteur": "Soufrière",
+      "type": "sommet",
+      "niveau": "Intermédiaire",
+      "duree_h": 5,
+      "acces": "Travaux sur plateformes et escaliers depuis le 09/10/2026 : suivre la signalétique.",
+      "points": [
+        {
+          "nom": "Sommet de la Soufrière",
+          "lat": 16.0446,
+          "lon": -61.6636,
+          "alt": 1467,
+          "role": "objectif"
+        },
+        {
+          "nom": "Col de l'Échelle",
+          "lat": 16.036,
+          "lon": -61.656,
+          "alt": 1300,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "soufriere-carmichael",
+      "nom": "La Soufrière par Carmichaël",
+      "secteur": "Soufrière",
+      "type": "sommet",
+      "niveau": "Hors sentiers",
+      "duree_h": 6,
+      "acces": "Sommet réglementé (arrêté 2026-0013).",
+      "points": [
+        {
+          "nom": "Morne Carmichaël",
+          "lat": 16.04,
+          "lon": -61.648,
+          "alt": 1414,
+          "role": "objectif"
+        },
+        {
+          "nom": "Sommet de la Soufrière",
+          "lat": 16.0446,
+          "lon": -61.6636,
+          "alt": 1467,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "grande-decouverte",
+      "nom": "Grande Découverte",
+      "secteur": "Soufrière",
+      "type": "sommet",
+      "niveau": "Hors sentiers",
+      "duree_h": 5,
+      "acces": "À vérifier sur randoguadeloupe.gp avant le départ.",
+      "points": [
+        {
+          "nom": "Sommet de la Grande Découverte",
+          "lat": 16.066,
+          "lon": -61.662,
+          "alt": 1263,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "victor-hugues",
+      "nom": "Trace Victor Hugues",
+      "secteur": "Soufrière / Goyave",
+      "type": "itinerance",
+      "niveau": "Hors sentiers",
+      "duree_h": 8,
+      "riviere_partielle": true,
+      "acces": "Éboulement près de la source Matéliane : vérifier l'état avant de partir.",
+      "points": [
+        {
+          "nom": "Matouba",
+          "lat": 16.047,
+          "lon": -61.69,
+          "alt": 800,
+          "role": "objectif"
+        },
+        {
+          "nom": "Crêtes (Grande Découverte)",
+          "lat": 16.075,
+          "lon": -61.665,
+          "alt": 1150,
+          "role": "objectif"
+        },
+        {
+          "nom": "Versant de Goyave",
+          "lat": 16.095,
+          "lon": -61.645,
+          "alt": 750,
+          "role": "objectif"
+        },
+        {
+          "nom": "Sarcelle",
+          "lat": 16.115,
+          "lon": -61.625,
+          "alt": 300,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "bains-matouba",
+      "nom": "Bains chauds du Matouba",
+      "secteur": "Saint-Claude",
+      "type": "riviere",
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Bains chauds",
+          "lat": 16.055,
+          "lon": -61.68,
+          "alt": 1050,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont (Rivière Rouge)",
+          "lat": 16.062,
+          "lon": -61.67,
+          "alt": 1150,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "bain-des-amours",
+      "nom": "Bain des Amours",
+      "secteur": "Gourbeyre",
+      "type": "riviere",
+      "niveau": "Intermédiaire",
+      "duree_h": 2,
+      "acces": "Amibes signalées dans les bains chauds : suivre les panneaux.",
+      "points": [
+        {
+          "nom": "Bain des Amours",
+          "lat": 15.995,
+          "lon": -61.671,
+          "alt": 300,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont",
+          "lat": 16.01,
+          "lon": -61.66,
+          "alt": 600,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "bassin-bleu",
+      "nom": "Bassin Bleu & cascade de la Parabole",
+      "secteur": "Gourbeyre",
+      "type": "riviere",
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "acces": "Accès contesté (litige sur le droit de passage).",
+      "points": [
+        {
+          "nom": "Bassin Bleu",
+          "lat": 16.005,
+          "lon": -61.663,
+          "alt": 450,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont",
+          "lat": 16.02,
+          "lon": -61.655,
+          "alt": 900,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "grande-voute",
+      "nom": "Monts Caraïbes — boucle du Morne Grande Voûte",
+      "secteur": "Sud (Vieux-Fort)",
+      "type": "rando",
+      "niveau": "Hors sentiers",
+      "duree_h": 5,
+      "acces": "À vérifier.",
+      "points": [
+        {
+          "nom": "Morne Grande Voûte",
+          "lat": 15.955,
+          "lon": -61.655,
+          "alt": 680,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "grande-pointe",
+      "nom": "Sentier de la Grande Pointe",
+      "secteur": "Sud (Trois-Rivières)",
+      "type": "littoral",
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "acces": "À vérifier.",
+      "points": [
+        {
+          "nom": "Grande Pointe",
+          "lat": 15.965,
+          "lon": -61.64,
+          "alt": 30,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "carbet-aire",
+      "nom": "Chutes du Carbet (aire aménagée, 2e chute)",
+      "secteur": "Carbet (Capesterre)",
+      "type": "riviere",
+      "niveau": "Touristique",
+      "duree_h": 2,
+      "acces": "Pied de la 2e chute interdit. 1re chute : statut incertain.",
+      "points": [
+        {
+          "nom": "2e chute",
+          "lat": 16.058,
+          "lon": -61.625,
+          "alt": 590,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont (sources du Carbet)",
+          "lat": 16.048,
+          "lon": -61.642,
+          "alt": 1100,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "carbet-1re-chute",
+      "nom": "1re chute du Carbet",
+      "secteur": "Carbet (Capesterre)",
+      "type": "riviere",
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "acces": "Fermée après l'éboulement de 2025 selon plusieurs sources : vérifier avant de partir.",
+      "points": [
+        {
+          "nom": "1re chute",
+          "lat": 16.05,
+          "lon": -61.638,
+          "alt": 900,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont (sources du Carbet)",
+          "lat": 16.045,
+          "lon": -61.648,
+          "alt": 1250,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "carbet-3e-chute",
+      "nom": "3e chute du Carbet par Petit-Marquisat",
+      "secteur": "Carbet (Capesterre)",
+      "type": "riviere",
+      "niveau": "Intermédiaire",
+      "duree_h": 2,
+      "acces": "Pied de la 3e chute interdit : point de vue seulement.",
+      "points": [
+        {
+          "nom": "3e chute",
+          "lat": 16.072,
+          "lon": -61.612,
+          "alt": 400,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont",
+          "lat": 16.058,
+          "lon": -61.63,
+          "alt": 800,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "carbet-carmichael",
+      "nom": "Trace du Carbet → Carmichaël",
+      "secteur": "Carbet (Capesterre)",
+      "type": "sommet",
+      "niveau": "Hors sentiers",
+      "duree_h": 6,
+      "riviere_partielle": true,
+      "acces": "Statut incertain (éboulement 2025) : vérifier sur randoguadeloupe.gp.",
+      "points": [
+        {
+          "nom": "Forêt du Carbet",
+          "lat": 16.055,
+          "lon": -61.63,
+          "alt": 700,
+          "role": "objectif"
+        },
+        {
+          "nom": "Morne Carmichaël",
+          "lat": 16.04,
+          "lon": -61.648,
+          "alt": 1414,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "citerne",
+      "nom": "Refuge de La Citerne depuis l'aire du Carbet",
+      "secteur": "Carbet (Capesterre)",
+      "type": "sommet",
+      "niveau": "Hors sentiers",
+      "duree_h": 3,
+      "acces": "Carbet sans eau potable.",
+      "points": [
+        {
+          "nom": "La Citerne",
+          "lat": 16.026,
+          "lon": -61.648,
+          "alt": 1150,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "cascade-carmichael",
+      "nom": "Cascade de la rivière Carmichaël",
+      "secteur": "Carbet (Capesterre)",
+      "type": "riviere",
+      "niveau": "Intermédiaire",
+      "duree_h": 3,
+      "acces": "Trace non officielle.",
+      "points": [
+        {
+          "nom": "Cascade",
+          "lat": 16.035,
+          "lon": -61.63,
+          "alt": 500,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont",
+          "lat": 16.035,
+          "lon": -61.645,
+          "alt": 1100,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "cascade-kong",
+      "nom": "Cascade Kong par la rivière du Pérou",
+      "secteur": "Capesterre (Concessions)",
+      "type": "riviere",
+      "niveau": "Hors sentiers",
+      "duree_h": 5,
+      "acces": "Itinéraire non entretenu.",
+      "points": [
+        {
+          "nom": "Cascade Kong",
+          "lat": 16.04,
+          "lon": -61.615,
+          "alt": 640,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont (rivière du Pérou)",
+          "lat": 16.035,
+          "lon": -61.635,
+          "alt": 1000,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "trou-a-diable",
+      "nom": "Trou à Diable par la rivière Bourceau",
+      "secteur": "Bouillante",
+      "type": "riviere",
+      "niveau": "Hors sentiers",
+      "duree_h": 6,
+      "acces": "Accès signalé fermé depuis fév. 2024 (risque d'éboulement) : à vérifier.",
+      "points": [
+        {
+          "nom": "Trou à Diable",
+          "lat": 16.13,
+          "lon": -61.735,
+          "alt": 350,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont (Bourceau)",
+          "lat": 16.13,
+          "lon": -61.715,
+          "alt": 700,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "trois-cretes-beaugendre",
+      "nom": "Trois Crêtes par la vallée de Beaugendre (+ refuge)",
+      "secteur": "Côte sous-le-vent (Vieux-Habitants)",
+      "type": "itinerance",
+      "niveau": "Hors sentiers",
+      "duree_h": 6,
+      "acces": "Route d'accès délicate, parking non surveillé.",
+      "points": [
+        {
+          "nom": "Vallée de Beaugendre",
+          "lat": 16.09,
+          "lon": -61.735,
+          "alt": 300,
+          "role": "objectif"
+        },
+        {
+          "nom": "Trois Crêtes",
+          "lat": 16.085,
+          "lon": -61.705,
+          "alt": 1000,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "trois-cretes-grande-riviere",
+      "nom": "Trois Crêtes par la vallée de la Grande Rivière",
+      "secteur": "Côte sous-le-vent (Vieux-Habitants)",
+      "type": "itinerance",
+      "niveau": "Hors sentiers",
+      "duree_h": 6,
+      "riviere_partielle": true,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Vallée de la Grande Rivière",
+          "lat": 16.07,
+          "lon": -61.745,
+          "alt": 200,
+          "role": "objectif"
+        },
+        {
+          "nom": "Trois Crêtes",
+          "lat": 16.075,
+          "lon": -61.705,
+          "alt": 1000,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "mamelles",
+      "nom": "Mamelles (de Pigeon et de Petit-Bourg)",
+      "secteur": "Traversée (col des Mamelles)",
+      "type": "sommet",
+      "niveau": "Touristique",
+      "duree_h": 3,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Mamelle de Pigeon",
+          "lat": 16.176,
+          "lon": -61.703,
+          "alt": 768,
+          "role": "objectif"
+        },
+        {
+          "nom": "Mamelle de Petit-Bourg",
+          "lat": 16.17,
+          "lon": -61.685,
+          "alt": 716,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "merwart",
+      "nom": "Trace Merwart",
+      "secteur": "Traversée (Vernou)",
+      "type": "rando",
+      "niveau": "Hors sentiers",
+      "duree_h": 4,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Vernou",
+          "lat": 16.18,
+          "lon": -61.65,
+          "alt": 300,
+          "role": "objectif"
+        },
+        {
+          "nom": "Haut de la trace",
+          "lat": 16.168,
+          "lon": -61.675,
+          "alt": 750,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "alizes-nord",
+      "nom": "Trace des Alizés nord (col des Mamelles → Belle-Hôtesse)",
+      "secteur": "Nord Basse-Terre",
+      "type": "itinerance",
+      "niveau": "Hors sentiers",
+      "duree_h": 7,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Col des Mamelles",
+          "lat": 16.172,
+          "lon": -61.692,
+          "alt": 590,
+          "role": "objectif"
+        },
+        {
+          "nom": "Crêtes centrales",
+          "lat": 16.205,
+          "lon": -61.72,
+          "alt": 700,
+          "role": "objectif"
+        },
+        {
+          "nom": "Belle-Hôtesse",
+          "lat": 16.235,
+          "lon": -61.745,
+          "alt": 400,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "baille-argent",
+      "nom": "Piton Baille-Argent par Belle-Hôtesse",
+      "secteur": "Nord Basse-Terre",
+      "type": "sommet",
+      "niveau": "Hors sentiers",
+      "duree_h": 6,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Piton Baille-Argent",
+          "lat": 16.215,
+          "lon": -61.73,
+          "alt": 720,
+          "role": "objectif"
+        },
+        {
+          "nom": "Belle-Hôtesse",
+          "lat": 16.235,
+          "lon": -61.745,
+          "alt": 400,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "tete-allegre",
+      "nom": "Boucle Tête Allègre / Sofaïa",
+      "secteur": "Nord Basse-Terre (Sainte-Rose)",
+      "type": "rando",
+      "niveau": "Hors sentiers",
+      "duree_h": 6,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Tête Allègre",
+          "lat": 16.27,
+          "lon": -61.715,
+          "alt": 650,
+          "role": "objectif"
+        },
+        {
+          "nom": "Sofaïa",
+          "lat": 16.285,
+          "lon": -61.725,
+          "alt": 300,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "trois-cornes",
+      "nom": "Saut des Trois Cornes",
+      "secteur": "Nord Basse-Terre (Sainte-Rose)",
+      "type": "riviere",
+      "niveau": "Touristique",
+      "duree_h": 2,
+      "acces": "À vérifier.",
+      "points": [
+        {
+          "nom": "Saut des Trois Cornes",
+          "lat": 16.29,
+          "lon": -61.725,
+          "alt": 250,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont",
+          "lat": 16.275,
+          "lon": -61.725,
+          "alt": 450,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "acomat",
+      "nom": "Canyoning dans les gorges d'Acomat (famille)",
+      "secteur": "Nord Basse-Terre (Pointe-Noire)",
+      "type": "riviere",
+      "niveau": "Touristique",
+      "duree_h": 4,
+      "acces": "Saut d'Acomat listé fermé : vérifier avec le prestataire.",
+      "points": [
+        {
+          "nom": "Gorges d'Acomat",
+          "lat": 16.23,
+          "lon": -61.775,
+          "alt": 50,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont",
+          "lat": 16.225,
+          "lon": -61.755,
+          "alt": 350,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "gros-morne-deshaies",
+      "nom": "Gros Morne de Deshaies",
+      "secteur": "Nord Basse-Terre (Deshaies)",
+      "type": "rando",
+      "niveau": "Touristique",
+      "duree_h": 2,
+      "conseil": "Plutôt en fin d'après-midi (coucher de soleil).",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Gros Morne",
+          "lat": 16.315,
+          "lon": -61.795,
+          "alt": 270,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "littoral-deshaies",
+      "nom": "Littoral de Deshaies",
+      "secteur": "Nord Basse-Terre (Deshaies)",
+      "type": "littoral",
+      "niveau": "Touristique",
+      "duree_h": 3,
+      "conseil": "Plutôt en fin d'après-midi.",
+      "acces": "",
+      "points": [
+        {
+          "nom": "Littoral de Deshaies",
+          "lat": 16.305,
+          "lon": -61.8,
+          "alt": 20,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "littoral-sainte-rose",
+      "nom": "Littoral de Sainte-Rose",
+      "secteur": "Nord Basse-Terre (Sainte-Rose)",
+      "type": "littoral",
+      "niveau": "Touristique",
+      "duree_h": 2,
+      "acces": "",
+      "points": [
+        {
+          "nom": "Littoral de Sainte-Rose",
+          "lat": 16.335,
+          "lon": -61.7,
+          "alt": 10,
+          "role": "objectif"
+        }
+      ]
+    },
+    {
+      "id": "tambour",
+      "nom": "Cascade de la Ravine Tambour",
+      "secteur": "Petit-Bourg (Tambour)",
+      "type": "riviere",
+      "niveau": "Intermédiaire",
+      "duree_h": 2,
+      "acces": "Aucune échappatoire si l'eau monte dans la ravine.",
+      "points": [
+        {
+          "nom": "Ravine Tambour",
+          "lat": 16.185,
+          "lon": -61.63,
+          "alt": 200,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont",
+          "lat": 16.175,
+          "lon": -61.655,
+          "alt": 500,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "gras-tambour",
+      "nom": "Cascades Gras et Tambour",
+      "secteur": "Petit-Bourg (Tambour)",
+      "type": "riviere",
+      "niveau": "Hors sentiers",
+      "duree_h": 3,
+      "acces": "Trace communautaire, non officielle.",
+      "points": [
+        {
+          "nom": "Cascades Gras",
+          "lat": 16.182,
+          "lon": -61.64,
+          "alt": 230,
+          "role": "objectif"
+        },
+        {
+          "nom": "Amont",
+          "lat": 16.175,
+          "lon": -61.655,
+          "alt": 500,
+          "role": "amont"
+        }
+      ]
+    },
+    {
+      "id": "gr-g1",
+      "nom": "GR G1 Trace des Alizés — traversée complète (étape du jour)",
+      "secteur": "Massif entier",
+      "type": "itinerance",
+      "niveau": "Hors sentiers",
+      "duree_h": 8,
+      "conseil": "~6 jours : regarder plutôt s'il y a plusieurs bons jours d'affilée.",
+      "acces": "Carbets non gardés, sans eau. Vérifier chaque étape.",
+      "points": [
+        {
+          "nom": "Vieux-Fort",
+          "lat": 15.96,
+          "lon": -61.69,
+          "alt": 300,
+          "role": "objectif"
+        },
+        {
+          "nom": "Soufrière",
+          "lat": 16.0446,
+          "lon": -61.6636,
+          "alt": 1467,
+          "role": "objectif"
+        },
+        {
+          "nom": "Trois Crêtes",
+          "lat": 16.08,
+          "lon": -61.705,
+          "alt": 1000,
+          "role": "objectif"
+        },
+        {
+          "nom": "Col des Mamelles",
+          "lat": 16.172,
+          "lon": -61.692,
+          "alt": 590,
+          "role": "objectif"
+        },
+        {
+          "nom": "Belle-Hôtesse",
+          "lat": 16.235,
+          "lon": -61.745,
+          "alt": 400,
+          "role": "objectif"
+        }
+      ]
+    }
+  ],
+  "exclus": [
+    {
+      "nom": "Chutes Moreau",
+      "raison": "Interdit (arrêté municipal 2019/182/PM)."
+    }
+  ],
+  "sommets": [
+    {
+      "nom": "La Soufrière",
+      "lat": 16.0446,
+      "lon": -61.6636,
+      "alt": 1467
+    },
+    {
+      "nom": "Morne Carmichaël",
+      "lat": 16.04,
+      "lon": -61.648,
+      "alt": 1414
+    },
+    {
+      "nom": "Grande Découverte",
+      "lat": 16.066,
+      "lon": -61.662,
+      "alt": 1263
+    },
+    {
+      "nom": "La Citerne",
+      "lat": 16.026,
+      "lon": -61.648,
+      "alt": 1150
+    },
+    {
+      "nom": "Trois Crêtes",
+      "lat": 16.08,
+      "lon": -61.705,
+      "alt": 1000
+    },
+    {
+      "nom": "Mamelle de Pigeon",
+      "lat": 16.176,
+      "lon": -61.703,
+      "alt": 768
+    },
+    {
+      "nom": "Piton Baille-Argent",
+      "lat": 16.215,
+      "lon": -61.73,
+      "alt": 720
+    }
+  ],
+  "horizons": {
+    "_info": "Points en mer pour juger l'horizon : à l'est pour le lever (Atlantique), à l'ouest pour le coucher (mer des Caraïbes). 'au_vent' sert à repérer une couche de nuages sous les sommets (mer de nuages).",
+    "est": {
+      "nom": "Mer à l'est (entre Basse-Terre et Marie-Galante)",
+      "lat": 16.05,
+      "lon": -61.45,
+      "alt": 0
+    },
+    "ouest": {
+      "nom": "Mer des Caraïbes (au large de Bouillante)",
+      "lat": 16.05,
+      "lon": -61.85,
+      "alt": 0
+    },
+    "au_vent": {
+      "nom": "Côte au vent (Capesterre)",
+      "lat": 16.045,
+      "lon": -61.57,
+      "alt": 50
+    }
+  },
+  "webcams": [
+    {
+      "id": "1649349158",
+      "titre": "Baillif, vue vers l'est (massif de la Soufrière ?)",
+      "note": "À vérifier : si elle ne montre pas le volcan, remplacer l'id par une autre webcam Windy."
+    }
+  ]
+}
