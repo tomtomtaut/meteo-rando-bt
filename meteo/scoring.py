@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 
-TZ = timezone(timedelta(hours=-4))  # Guadeloupe, pas d'heure d'été
+from .heure import TZ  # noqa: E402
 
 # --- Seuils (à calibrer) --------------------------------------------------------------------
 RAIN_PENALTY = [(0.1, 0), (0.5, 15), (1.0, 30), (2.5, 50), (5.0, 70), (math.inf, 90)]  # mm/h → pénalité
@@ -144,9 +144,15 @@ def rain_stats(m: Merged, ti: int, cols: list[int], pctl: float) -> tuple[float,
     return max(rains), (max(probs) if probs else None)
 
 
+def rain_index(m: Merged, ti: int) -> int:
+    """La pluie « de h à h+1 » est le cumul étiqueté h+1 (cumul sur l'heure écoulée, AROME comme Open-Meteo)."""
+    return ti + 1 if ti + 1 < len(m.times) else ti
+
+
 def hour_eval(spot: dict, m: Merged, ti: int) -> tuple[float | None, dict]:
+    """Conditions pour l'heure qui commence à m.times[ti]."""
     obj = spot["_obj"]
-    rain, prob = rain_stats(m, ti, obj, RAIN_PCTL)
+    rain, prob = rain_stats(m, rain_index(m, ti), obj, RAIN_PCTL)
     if spot["type"] == "mer":
         from . import mer
         gust, cape = _max(m, "gust", ti, obj), _max(m, "cape", ti, obj)
@@ -202,9 +208,9 @@ def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None =
 
         rain_win = sum(e[1]["rain"] for e in evals)
         if spot["type"] == "riviere" or spot.get("riviere_partielle"):
-            before = [m.index.get(t0 - timedelta(hours=k)) for k in range(1, 25)]
+            before = [m.index.get(t0 - timedelta(hours=k)) for k in range(0, 24)]  # cumuls de t0-24h à t0
             p24 = sum(_river_rain(spot, m, ti) for ti in before if ti is not None)
-            up_win = [_river_rain(spot, m, ti) for ti in tis]
+            up_win = [_river_rain(spot, m, rain_index(m, ti)) for ti in tis]
             if spot["type"] == "riviere":
                 if p24 >= RIVER_NOGO_24H:
                     nogo = True
@@ -227,17 +233,17 @@ def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None =
                 if max(up_win) >= RIVER_NOGO_RATE:
                     score -= 20
 
+        span = f"de {start}h à {start + dur}h"
         if rain_win < 0.3:
             reasons.insert(0, "Sec")
         elif rain_win < 2:
-            reasons.insert(0, f"Quelques gouttes ({rain_win:.1f} mm)".replace(".", ","))
+            reasons.insert(0, f"{rain_win:.1f} mm en tout {span} (petites averses)".replace(".", ","))
         elif rain_win < 6:
-            reasons.insert(0, f"Averses ({rain_win:.0f} mm)")
+            reasons.insert(0, f"{rain_win:.0f} mm en tout {span} (averses)")
         else:
-            reasons.insert(0, f"Pluie ({rain_win:.0f} mm)")
-        n_cloud = sum(e[1]["in_cloud"] for e in evals)
-        if spot["_high"]:
-            reasons.append("Sommet dégagé" if n_cloud == 0 else f"Sommet dans le nuage {n_cloud} h sur {dur}")
+            reasons.insert(0, f"{rain_win:.0f} mm en tout {span} (pluie)")
+        if spot.get("_high"):
+            reasons += cloud_reasons(spot, m, tis, dur)
         probs = [e[1]["prob"] for e in evals if e[1]["prob"] is not None]
         if probs and max(probs) >= 0.15 and rain_win < 6:
             reasons.append(f"risque d'averse ~{round(max(probs) * 10) * 10} %")
@@ -271,6 +277,27 @@ def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None =
         return {"score": None, "nogo": False, "reasons": ["Pas de données"], "source": "—"}
     best["label"] = label(best)
     return best
+
+
+def cloud_reasons(spot: dict, m: Merged, tis: list[int], dur: int) -> list[str]:
+    """Nuage point par point (sommet, col…), avec le nom du point."""
+    names = spot.get("_names", {})
+    out = []
+    for i in spot.get("_obj_high", []):
+        sts = [(m.summit_state.get((i, m.times[ti])) or (None,))[0] for ti in tis]
+        known = [x for x in sts if x]
+        if not known:
+            continue
+        n_in = sum(x == "nuage" for x in known)
+        n_clear = sum(x in ("degage", "mer") for x in known)
+        nom = names.get(i, "sommet")
+        if n_in:
+            out.append(f"{nom} dans le nuage {n_in} h sur {dur}")
+        elif n_clear == len(known):
+            out.append(f"{nom} dégagé")
+        else:
+            out.append(f"{nom} : nuages partiels ({len(known) - n_clear} h incertaines)")
+    return out
 
 
 def label(r: dict) -> str:

@@ -12,7 +12,7 @@ import numpy as np
 
 from . import scoring
 
-TZ = timezone(timedelta(hours=-4))
+from .heure import TZ  # noqa: E402
 STEP = 0.025                 # pas de la grille AROME Antilles
 LAT0, LON0 = 9.7, -75.3      # coin de la grille « CARAÏBES » (open data Météo-France)
 HOURS = list(range(5, 20))
@@ -187,8 +187,8 @@ def compute(merged, cell_idx: list[int], cell_alts: list[float], days: list[date
                 s_s, _ = scoring.hour_eval(spots["sommet"][n], merged, ti)
                 # rivière : pluie des 24 h précédentes et de l'heure, sur la case et ses voisines (90e percentile)
                 p24 = sum(r90(merged.index[t - timedelta(hours=k)], i)
-                          for k in range(1, 25) if (t - timedelta(hours=k)) in merged.index)
-                if p24 >= scoring.RIVER_NOGO_24H or r90(ti, i) >= scoring.RIVER_NOGO_RATE:
+                          for k in range(0, 24) if (t - timedelta(hours=k)) in merged.index)
+                if p24 >= scoring.RIVER_NOGO_24H or r90(scoring.rain_index(merged, ti), i) >= scoring.RIVER_NOGO_RATE:
                     s_v = 0.0
                 else:
                     s_v = s_r - (35 if p24 >= scoring.RIVER_BAD_24H else 15 if p24 >= scoring.RIVER_MEH_24H else 0)

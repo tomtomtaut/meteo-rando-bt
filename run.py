@@ -62,6 +62,7 @@ def load_config():
                 spot["_obj"].append(i)
                 if spot["_high"] and p["alt"] >= 700:
                     spot["_obj_high"].append(i)
+                    spot.setdefault("_names", {})[i] = f"{p['nom']} ({p['alt']} m)"
     for s in cfg.get("sommets", []):
         s["_i"] = pts.add(s)
     hz = cfg.get("horizons", {})
@@ -218,6 +219,22 @@ def main():
                            "alt": None if (np.isnan(a) or c["kind"] == "mer") else round(a)}
                           for c, a in zip(grid_cells, grid_alts)]
     grid_data["step"] = grid.STEP
+    # Contrôles de cohérence des dates et heures (heure de Guadeloupe) : visibles dans debug.json
+    controles = []
+    for d in days:
+        for x in d["sommets"]:
+            for k in ("lever", "coucher"):
+                if x[k].get("date") != d["date"]:
+                    controles.append(f"{x['nom']} {k} daté du {x[k].get('date')} au lieu du {d['date']}")
+            hh = {h["h"]: h["state"] for h in x["hours"]}
+            for k in ("lever", "coucher"):
+                hr, mn = (int(v) for v in x[k]["heure"].split("h"))
+                near = hr + (1 if mn >= 30 else 0)
+                if near in hh and hh[near] != x[k]["etat"]:
+                    controles.append(f"{x['nom']} {k} {x[k]['heure']} : état {x[k]['etat']} ≠ barre à {near}h ({hh[near]})")
+    debug["controles"] = controles or ["OK : levers, couchers et barres horaires cohérents, dates en heure de Guadeloupe"]
+    if controles:
+        warnings.append(f"{len(controles)} incohérence(s) d'heures détectée(s) : voir debug.json.")
     for d in days:
         dd = date.fromisoformat(d["date"])
         d["situation"]["texte"] = d["situation"].get("texte", []) + situation.islands_and_sea(

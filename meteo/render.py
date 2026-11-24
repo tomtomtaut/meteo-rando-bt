@@ -12,7 +12,7 @@ MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sep
 COLORS = {"Top": "#1f9d55", "Bien": "#7cb342", "Moyen": "#f0a500", "À éviter": "#e06c3c", "Non": "#b3261e"}
 SOURCE_NAMES = {"AROME": "AROME 2,5 km", "ECMWF-ens": "ensemble ECMWF (probabilités, maille ~25 km)",
                 "ECMWF": "ECMWF seul (maille ~9-25 km)", "—": "pas de donnée"}
-TZL = timezone(timedelta(hours=-4))
+from .heure import TZ as TZL  # noqa: E402
 
 
 def coverage(merged, d: date) -> str:

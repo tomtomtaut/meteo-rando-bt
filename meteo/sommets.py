@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 
-TZ = timezone(timedelta(hours=-4))
+from .heure import TZ  # noqa: E402
 
 # --- Seuils (à calibrer avec la webcam et les sorties) -------------------------------------
 CLOUD_IN = 50      # % de fraction nuageuse à l'altitude du sommet → dans le nuage
@@ -39,8 +39,10 @@ STATES = {
 def sun_times(d: date, lat: float, lon: float, alt: float = 0.0) -> tuple[datetime, datetime]:
     """Lever et coucher (UTC), équation du lever de soleil, avec correction d'altitude
     (depuis un sommet, l'horizon est plus bas : le soleil apparaît quelques minutes plus tôt)."""
+    # Jour julien à midi UTC du jour d (nombre entier). Attention : l'arrondi « ceil(... + 0.0008) » de la
+    # formule usuelle suppose une date à minuit ; appliqué à midi, il décale d'un jour (bug corrigé).
     jd_noon = (datetime(d.year, d.month, d.day, 12, tzinfo=timezone.utc).timestamp() / 86400) + 2440587.5
-    n = math.ceil(jd_noon - 2451545.0 + 0.0008)
+    n = round(jd_noon - 2451545.0)
     j_star = n - lon / 360
     m = math.radians((357.5291 + 0.98560028 * j_star) % 360)
     c = 1.9148 * math.sin(m) + 0.02 * math.sin(2 * m) + 0.0003 * math.sin(3 * m)
@@ -164,8 +166,14 @@ def day_summary(sommet: dict, i: int, states: dict, merged, d: date, i_east, i_w
     good = ("degage", "mer")
     lever = {"heure": _hm(rise), "etat": rise_state, "horizon": horizon_clear(merged, i_east, t_rise), "src": rise_src}
     coucher = {"heure": _hm(sset), "etat": set_state, "horizon": horizon_clear(merged, i_west, t_set), "src": set_src}
-    lever["top"] = rise_state in good and lever["horizon"] is not False
-    coucher["top"] = set_state in good and coucher["horizon"] is not False
+    def neighbour_ok(t):  # l'heure voisine (le soleil se lève/couche entre deux heures pleines) pas dans le nuage
+        others = [states.get((i, t + timedelta(hours=k))) for k in (-1, 1)]
+        return all(o is None or o[0] != "nuage" for o in others)
+
+    lever["top"] = rise_state in good and lever["horizon"] is not False and neighbour_ok(t_rise)
+    coucher["top"] = set_state in good and coucher["horizon"] is not False and neighbour_ok(t_set)
+    lever["date"] = rise.astimezone(TZ).date().isoformat()
+    coucher["date"] = sset.astimezone(TZ).date().isoformat()
 
     clear = [x["h"] for x in hours if x["state"] in good]
     texte = []

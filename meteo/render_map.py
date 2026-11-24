@@ -205,7 +205,8 @@ function panel() {
   });
 }
 
-Promise.all([fetch("grid.json").then(r => r.json()), fetch("data.json").then(r => r.json())]).then(([g, d]) => {
+Promise.all([fetch("grid.json", {cache: "no-store"}).then(r => r.json()),
+             fetch("data.json", {cache: "no-store"}).then(r => r.json())]).then(([g, d]) => {
   G = g; D = d;
   document.getElementById("meta").textContent = `Rapport du ${d.generated} · sources`;
   document.getElementById("sources").textContent = d.sources;

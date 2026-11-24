@@ -17,7 +17,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 
-TZ = timezone(timedelta(hours=-4))
+from .heure import TZ  # noqa: E402
 WIND_WEAK, WIND_STRONG = 18, 36  # km/h vers 1 000 m
 MOIST_TOP_RH = 75                # % : l'air au-dessus de ce seuil est compté dans la couche humide
 DRY_ALOFT, MOIST_ALOFT = 35, 70  # % d'humidité à 700 hPa
