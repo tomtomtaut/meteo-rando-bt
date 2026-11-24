@@ -93,14 +93,17 @@ def state_from_profile(prof: dict, i: int, alt: float, i_windward: int | None) -
 
 
 def state_from_surface(rh850: float, lcc: float) -> str | None:
-    """Repli sans profil AROME (jour 3, ECMWF) : humidité vers 1 500 m et nuages bas."""
+    """Repli sans profil AROME (au-delà d'AROME, ECMWF ~9-25 km) : humidité vers 1 500 m et nuages bas.
+
+    Seuils volontairement sévères : la maille ECMWF mélange mer et relief et ne voit pas le nuage
+    accroché au sommet, elle est donc trop optimiste sur le « dégagé »."""
     if math.isnan(rh850) and math.isnan(lcc):
         return None
     r = 0 if math.isnan(rh850) else rh850
     c = 0 if math.isnan(lcc) else lcc
-    if r >= 92 or c >= 85:
+    if r >= 85 or c >= 70:
         return "nuage"
-    if r < 75 and c < 50:
+    if r < 65 and c < 30:
         return "degage"
     return "incertain"
 
@@ -156,9 +159,11 @@ def day_summary(sommet: dict, i: int, states: dict, merged, d: date, i_east, i_w
 
     rise_state, t_rise = at(rise)
     set_state, t_set = at(sset)
+    rise_src = (states.get((i, t_rise)) or (None, None, None))[2]
+    set_src = (states.get((i, t_set)) or (None, None, None))[2]
     good = ("degage", "mer")
-    lever = {"heure": _hm(rise), "etat": rise_state, "horizon": horizon_clear(merged, i_east, t_rise)}
-    coucher = {"heure": _hm(sset), "etat": set_state, "horizon": horizon_clear(merged, i_west, t_set)}
+    lever = {"heure": _hm(rise), "etat": rise_state, "horizon": horizon_clear(merged, i_east, t_rise), "src": rise_src}
+    coucher = {"heure": _hm(sset), "etat": set_state, "horizon": horizon_clear(merged, i_west, t_set), "src": set_src}
     lever["top"] = rise_state in good and lever["horizon"] is not False
     coucher["top"] = set_state in good and coucher["horizon"] is not False
 

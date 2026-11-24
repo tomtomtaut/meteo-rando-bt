@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from meteo import arome, ecmwf, render, scoring, sommets
+from meteo import arome, ecmwf, render, scoring, situation, sommets
 
 log = logging.getLogger("rapport")
 ROOT = Path(__file__).parent
@@ -79,9 +79,16 @@ def main():
 
     ec = ecmwf.fetch(pts.coords, pts.alts)
     if ec is None:
-        warnings.append("ECMWF (Open-Meteo) indisponible ce soir : le jour 3 n'est pas calculé.")
+        warnings.append("ECMWF (Open-Meteo) indisponible : les heures au-delà d'AROME ne sont pas calculées.")
+    ens = ecmwf.fetch_ensemble(pts.coords)
+    if ens is None:
+        warnings.append("Ensemble ECMWF indisponible : au-delà d'AROME, pluie en un seul scénario (pas de probabilité).")
+    som0 = cfg.get("sommets", [{}])[0]
+    dust = ecmwf.fetch_dust(som0.get("lat", 16.04), som0.get("lon", -61.66))
+    debug.update({"ensemble": ens and {"model": ens["model"], "membres": ens["n_members"]},
+                  "poussieres": dust is not None})
 
-    ar, profiles, run_txt = None, {}, "AROME indisponible"
+    ar, ar_lag, profiles, run_txt = None, None, {}, "AROME indisponible"
     try:
         found = arome.find_run(now)
         if found:
@@ -96,6 +103,19 @@ def main():
             missing = [k for k in ("precip", "lcc", "rh", "gust") if k not in ar]
             if missing:
                 warnings.append(f"Champs AROME non trouvés : {', '.join(missing)} (remplacés par ECMWF).")
+
+            # Run précédent (pluie seulement) : « ensemble décalé », 2 scénarios AROME au lieu d'un
+            try:
+                prev = arome.find_run(now, before=run, paquets=("SP1",))
+                if prev:
+                    run2, hmax2 = prev
+                    res2, inv2, _ = arome.download(run2, hmax2, pts.coords, paquets=("SP1",))
+                    ar_lag = arome.to_series(run2, hmax2, res2, inv2, n)
+                    debug["run_precedent"] = run2.isoformat()
+                    run_txt += f" + run précédent {run2:%d/%m %Hh} UTC pour la pluie"
+            except Exception as e:  # noqa: BLE001
+                log.exception("Run précédent en échec")
+                warnings.append(f"Run AROME précédent non lu ({e.__class__.__name__}) : probabilités sur un seul run.")
 
             # Profils verticaux, seulement aux heures de jour (lever → coucher)
             hours = [h for h in range(0, hmax + 1)
@@ -116,26 +136,35 @@ def main():
         log.exception("AROME en échec")
         warnings.append(f"AROME en échec ({e.__class__.__name__}) : prévision ECMWF seule.")
 
-    sources = run_txt + (f" · {ec['model']} via Open-Meteo au-delà" if ec else "")
-    merged = scoring.merge(ar, ec, n)
+    debug["runs_publies"] = arome.AVAILABILITY
+    sources = run_txt + (f" · au-delà : {ec['model']}" if ec else "") + (
+        f" et ensemble {ens['model']} ({ens['n_members']} scénarios)" if ens else "") + " (Open-Meteo)"
+    merged = scoring.merge(ar, ec, n, arome_lag=ar_lag, ens=ens)
     merged.summit_state = sommets.compute_states(high_points(cfg, pts), profiles, merged, idx_h.get("au_vent"))
 
-    today = now.astimezone(scoring.TZ).date()
-    titles = ["Demain", "Après-demain", "Dans 3 jours"]
+    local = now.astimezone(scoring.TZ)
+    today = local.date()
+    # Avant 15h, le rapport couvre aujourd'hui (heures restantes), demain, après-demain ;
+    # le rapport du soir couvre les 3 jours suivants.
+    first = 0 if local.hour < 15 else 1
+    names = {0: "Aujourd'hui", 1: "Demain", 2: "Après-demain", 3: "Dans 3 jours"}
     days = []
-    for k in range(1, 4):
+    for k in range(first, first + 3):
         d = today + timedelta(days=k)
-        all_ = [(s, scoring.evaluate_day(s, merged, d)) for s in cfg["spots"]]
+        nb = now + timedelta(minutes=30) if k == 0 else None
+        all_ = [(s, scoring.evaluate_day(s, merged, d, not_before=nb)) for s in cfg["spots"]]
         days.append({
             "date": d.isoformat(),
-            "title": f"{titles[k - 1]} · {render.fdate(d)}",
+            "title": f"{names[k]} · {render.fdate(d)}",
             "short": render.fdate(d).split(" ")[0][:3] + f". {d.day}",
             "all": all_,
             "top": scoring.top3(all_),
+            "couverture": render.coverage(merged, d),
+            "situation": situation.day_situation(d, profiles, idx_h.get("est"), merged, idx_h.get("est"),
+                                                 dust=dust),
             "sommets": [sommets.day_summary(s, s["_i"], merged.summit_state, merged, d,
                                             idx_h.get("est"), idx_h.get("ouest")) for s in cfg.get("sommets", [])],
         })
-    local = now.astimezone(scoring.TZ)
     report = {
         "generated": f"{render.fdate(local.date())} à {local.hour}h{local:%M}",
         "sources": sources, "warnings": warnings, "days": days, "spots": cfg["spots"],
@@ -151,6 +180,7 @@ def main():
             "date": d["date"], "top": [s["id"] for s, _ in d["top"]],
             "scores": {s["id"]: {k: r.get(k) for k in ("score", "label", "start", "end", "source", "reasons")}
                        for s, r in d["all"]},
+            "situation": d["situation"],
             "sommets": {x["nom"]: {"etats": {h["h"]: h["state"] for h in x["hours"]},
                                    "details": {h["h"]: h["det"] for h in x["hours"]},
                                    "lever": x["lever"], "coucher": x["coucher"], "texte": x["texte"]}
@@ -162,7 +192,7 @@ def main():
     if args.history:
         h = Path(args.history)
         h.mkdir(parents=True, exist_ok=True)
-        (h / f"{local:%Y-%m-%d}.json").write_text(json.dumps(compact, ensure_ascii=False, default=str), encoding="utf-8")
+        (h / f"{local:%Y-%m-%d_%Hh}.json").write_text(json.dumps(compact, ensure_ascii=False, default=str), encoding="utf-8")
     for d in days:
         log.info("%s : %s", d["title"], ", ".join(f"{s['nom']} ({r['score']})" for s, r in d["top"]) or "rien")
         sf = d["sommets"][0] if d["sommets"] else None

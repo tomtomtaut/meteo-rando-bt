@@ -20,7 +20,11 @@ CLOUD_PARTIAL = 60
 RH_FOG = 97              # % d'humidité à 2 m = brouillard
 GUST_SUMMIT = [(50, 0), (65, 15), (math.inf, 35)]  # km/h
 GUST_OTHER = [(70, 0), (math.inf, 20)]
-CAPE_UNSTABLE = 1000     # J/kg
+CAPE_UNSTABLE = 2000     # J/kg. Sous les tropiques 1 000-1 500 est courant sans orage : on ne signale
+                         # l'instabilité que si elle est forte ET qu'une averse est prévue autour.
+RAIN_WET = 0.5           # mm/h : seuil d'« averse » pour les probabilités
+RAIN_PCTL = 70           # percentile des scénarios (voisinage x runs) retenu pour la pluie au point
+RIVER_PCTL = 90          # plus prudent pour les crues : 90e percentile en amont
 HOT = 31                 # °C, pour le littoral
 RIVER_NOGO_24H = 25      # mm tombés en amont sur les 24 h avant le départ
 RIVER_BAD_24H = 10
@@ -50,8 +54,14 @@ class Merged:
         self.index = {t: i for i, t in enumerate(self.times)}
 
 
-def merge(arome: dict | None, ecmwf: dict | None, n_points: int) -> Merged:
-    """Base horaire ECMWF, remplacée par AROME là où AROME a des valeurs."""
+def merge(arome: dict | None, ecmwf: dict | None, n_points: int,
+          arome_lag: dict | None = None, ens: dict | None = None) -> Merged:
+    """Base horaire ECMWF, remplacée par AROME là où AROME a des valeurs.
+
+    Pluie en scénarios (« precip_ens », (T, P, M)) :
+    - heures AROME : les 9 mailles autour du point, pour le dernier run ET le run précédent
+      (méthode de voisinage + ensemble décalé : une averse prévue à 2 km près compte) ;
+    - heures ECMWF : les 51 scénarios de l'ensemble ECMWF si disponibles, sinon la valeur unique."""
     if ecmwf is None and arome is None:
         raise RuntimeError("Aucune source météo disponible")
     base = ecmwf or arome
@@ -63,7 +73,7 @@ def merge(arome: dict | None, ecmwf: dict | None, n_points: int) -> Merged:
     idx = {t: i for i, t in enumerate(times)}
     T = len(times)
     data, source = {}, ["ECMWF" if ecmwf else "—"] * T
-    for var in ("precip", "lcc", "mcc", "rh", "rh850", "gust", "t2m", "cape"):
+    for var in ("precip", "lcc", "mcc", "rh", "rh850", "rh700", "ws925", "gust", "t2m", "cape"):
         arr = np.full((T, n_points), np.nan)
         if ecmwf and var in ecmwf:
             for i, t in enumerate(ecmwf["times"]):
@@ -78,6 +88,29 @@ def merge(arome: dict | None, ecmwf: dict | None, n_points: int) -> Merged:
         for i, t in enumerate(arome["times"]):
             if not np.all(np.isnan(arome["precip"][i])):
                 source[idx[t]] = "AROME"
+
+    m_ar = 9 * (2 if arome_lag else 1)
+    m_ens = ens["precip_ens"].shape[2] if ens else 1
+    pe = np.full((T, n_points, max(m_ar, m_ens)), np.nan)
+    if ecmwf and "precip" in ecmwf:
+        for i, t in enumerate(ecmwf["times"]):
+            pe[idx[t], :, 0] = ecmwf["precip"][i]
+    if ens:
+        for i, t in enumerate(ens["times"]):
+            if t in idx and source[idx[t]] != "AROME" and not np.all(np.isnan(ens["precip_ens"][i])):
+                pe[idx[t], :, :m_ens] = ens["precip_ens"][i]
+                source[idx[t]] = "ECMWF-ens"
+    if arome and "precip_nb" in arome:
+        lag = {t: i for i, t in enumerate(arome_lag["times"])} if arome_lag and "precip_nb" in arome_lag else {}
+        for i, t in enumerate(arome["times"]):
+            if source[idx[t]] != "AROME":
+                continue
+            row = np.full((n_points, pe.shape[2]), np.nan)
+            row[:, :9] = arome["precip_nb"][i]
+            if t in lag:
+                row[:, 9:18] = arome_lag["precip_nb"][lag[t]]
+            pe[idx[t]] = row
+    data["precip_ens"] = pe
     return Merged(times, data, source)
 
 
@@ -92,9 +125,28 @@ def _nz(x: float) -> float:
     return 0.0 if math.isnan(x) else x
 
 
+def rain_stats(m: Merged, ti: int, cols: list[int], pctl: float) -> tuple[float, float | None]:
+    """(pluie retenue en mm/h, probabilité d'averse) : max sur les points, à partir des scénarios."""
+    ens = m.data.get("precip_ens")
+    if ens is None:
+        return _nz(_max(m, "precip", ti, cols)), None
+    rains, probs = [], []
+    for c in cols:
+        v = ens[ti, c]
+        v = v[~np.isnan(v)]
+        if len(v) >= 2:
+            rains.append(float(np.percentile(v, pctl)))
+            probs.append(float(np.mean(v >= RAIN_WET)))
+        elif len(v) == 1:
+            rains.append(float(v[0]))
+    if not rains:
+        return _nz(_max(m, "precip", ti, cols)), None
+    return max(rains), (max(probs) if probs else None)
+
+
 def hour_eval(spot: dict, m: Merged, ti: int) -> tuple[float, dict]:
     obj = spot["_obj"]
-    rain = _nz(_max(m, "precip", ti, obj))
+    rain, prob = rain_stats(m, ti, obj, RAIN_PCTL)
     lcc, rh = _max(m, "lcc", ti, obj), _max(m, "rh", ti, obj)
     gust, cape, t2m = _max(m, "gust", ti, obj), _max(m, "cape", ti, obj), _max(m, "t2m", ti, obj)
     pen = _lookup(RAIN_PENALTY, rain)
@@ -111,22 +163,26 @@ def hour_eval(spot: dict, m: Merged, ti: int) -> tuple[float, dict]:
         pen += _lookup(GUST_SUMMIT, _nz(gust))
     else:
         pen += _lookup(GUST_OTHER, _nz(gust))
-    if _nz(cape) >= CAPE_UNSTABLE:
+    storm = _nz(cape) >= CAPE_UNSTABLE and (rain >= RAIN_WET or (prob or 0) >= 0.3)
+    if storm:
         pen += 15
     if spot["type"] == "littoral" and _nz(t2m) >= HOT:
         pen += 10
-    return max(0.0, 100.0 - pen), {"rain": rain, "in_cloud": in_cloud, "gust": gust, "cape": cape, "t2m": t2m}
+    return max(0.0, 100.0 - pen), {"rain": rain, "prob": prob, "in_cloud": in_cloud, "gust": gust,
+                                   "storm": storm, "t2m": t2m}
 
 
 def _river_rain(spot: dict, m: Merged, ti: int) -> float:
-    return _nz(_max(m, "precip", ti, spot["_all"]))
+    return rain_stats(m, ti, spot["_all"], RIVER_PCTL)[0]
 
 
-def evaluate_day(spot: dict, m: Merged, day: date) -> dict:
+def evaluate_day(spot: dict, m: Merged, day: date, not_before: datetime | None = None) -> dict:
     dur = max(2, min(9, math.ceil(spot["duree_h"])))
     best = None
     for start in range(FIRST_START, LAST_END - dur + 1):
         t0 = datetime(day.year, day.month, day.day, start, tzinfo=TZ).astimezone(timezone.utc)
+        if not_before is not None and t0 < not_before:
+            continue
         tis = [m.index.get(t0 + timedelta(hours=k)) for k in range(dur)]
         if any(t is None for t in tis):
             continue
@@ -153,7 +209,7 @@ def evaluate_day(spot: dict, m: Merged, day: date) -> dict:
                     elif p24 >= RIVER_MEH_24H:
                         score -= 15
                     reasons.append(f"Amont : {p24:.0f} mm sur les 24 h avant")
-                if any(_nz(e[1]["cape"]) >= CAPE_UNSTABLE for e in evals) and sum(up_win) >= 1:
+                if any(e[1]["storm"] for e in evals):
                     score -= 25
             else:
                 if p24 >= 30:
@@ -173,8 +229,11 @@ def evaluate_day(spot: dict, m: Merged, day: date) -> dict:
         n_cloud = sum(e[1]["in_cloud"] for e in evals)
         if spot["_high"]:
             reasons.append("Sommet dégagé" if n_cloud == 0 else f"Sommet dans le nuage {n_cloud} h sur {dur}")
-        if any(_nz(e[1]["cape"]) >= CAPE_UNSTABLE for e in evals):
-            reasons.append("Air instable : orages possibles")
+        probs = [e[1]["prob"] for e in evals if e[1]["prob"] is not None]
+        if probs and max(probs) >= 0.15 and rain_win < 6:
+            reasons.append(f"risque d'averse ~{round(max(probs) * 10) * 10} %")
+        if any(e[1]["storm"] for e in evals):
+            reasons.append("Air très instable : orage possible")
         gmax = max(_nz(e[1]["gust"]) for e in evals)
         if gmax >= 50:
             reasons.append(f"Rafales jusqu'à {gmax:.0f} km/h")
@@ -183,13 +242,15 @@ def evaluate_day(spot: dict, m: Merged, day: date) -> dict:
 
         score = 0.0 if nogo else max(0.0, min(100.0, score))
         arome_share = sum(m.source[ti] == "AROME" for ti in tis) / dur
+        ens_share = sum(m.source[ti] == "ECMWF-ens" for ti in tis) / dur
         cand = {
             "score": round(score),
             "nogo": nogo,
             "start": f"{start}h",
             "end": f"{start + dur}h",
             "reasons": reasons,
-            "source": "AROME" if arome_share >= 0.9 else ("mixte" if arome_share > 0 else "ECMWF"),
+            "source": "AROME" if arome_share >= 0.9 else ("mixte" if arome_share > 0 else
+                                                          ("ECMWF-ens" if ens_share >= 0.5 else "ECMWF")),
             "hourly": [round(s) for s in scores],
         }
         if best is None or cand["score"] > best["score"]:

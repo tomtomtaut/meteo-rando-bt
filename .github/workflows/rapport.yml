@@ -2,8 +2,10 @@ name: Rapport météo rando
 
 on:
   schedule:
-    # 21h40 UTC = 17h40 en Guadeloupe : la page est en ligne vers 18h
+    # 21h40 UTC = 17h40 en Guadeloupe : rapport du soir (demain, après-demain, J+3), en ligne vers 18h
     - cron: "40 21 * * *"
+    # 9h20 UTC = 5h20 en Guadeloupe : mise à jour du matin (aujourd'hui, demain, après-demain)
+    - cron: "20 9 * * *"
   workflow_dispatch:
 
 permissions:

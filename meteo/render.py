@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from html import escape
 
 from .sommets import STATES, FIRST_H, LAST_H
@@ -10,11 +10,24 @@ from .sommets import STATES, FIRST_H, LAST_H
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
 COLORS = {"Top": "#1f9d55", "Bien": "#7cb342", "Moyen": "#f0a500", "À éviter": "#e06c3c", "Non": "#b3261e"}
-SOURCE_TXT = {
-    "AROME": "Fiabilité : bonne (AROME 2,5 km)",
-    "mixte": "Fiabilité : moyenne (AROME + ECMWF)",
-    "ECMWF": "Tendance seulement (ECMWF, maille trop large pour le relief)",
-}
+SOURCE_NAMES = {"AROME": "AROME 2,5 km", "ECMWF-ens": "ensemble ECMWF (probabilités, maille ~25 km)",
+                "ECMWF": "ECMWF seul (maille ~9-25 km)", "—": "pas de donnée"}
+TZL = timezone(timedelta(hours=-4))
+
+
+def coverage(merged, d: date) -> str:
+    """Quel modèle couvre quelles heures de la journée (5h-20h)."""
+    segs = []
+    for h in range(5, 21):
+        t = datetime(d.year, d.month, d.day, h, tzinfo=TZL).astimezone(timezone.utc)
+        ti = merged.index.get(t)
+        src = merged.source[ti] if ti is not None else "—"
+        if segs and segs[-1][0] == src:
+            segs[-1][2] = h
+        else:
+            segs.append([src, h, h])
+    parts = [f"{SOURCE_NAMES.get(src, src)} de {a}h à {b + 1}h" for src, a, b in segs]
+    return " · ".join(parts)
 
 
 def fdate(d: date) -> str:
@@ -44,7 +57,8 @@ def sommet_row(x: dict) -> str:
         lab, col = STATES.get(hr["state"], STATES[None])
         det = hr.get("det") or {}
         tip = f"{hr['h']}h : {lab}" + (f" (nuage {det['cc']} %, humidité {det['rh']} %)" if det.get("cc") is not None else "")
-        cells.append(f'<span class="h" style="background:{col}" title="{escape(tip)}"></span>')
+        faded = ' faded' if hr.get("src") == "ECMWF" else ''
+        cells.append(f'<span class="h{faded}" style="background:{col}" title="{escape(tip)}"></span>')
 
     def sun(icon, s):
         mark = '<b class="ok">✓</b>' if s["top"] else '<span class="no">✗</span>'
@@ -76,8 +90,10 @@ def pepites(report: dict) -> str:
         for kind, key in (("Lever", "lever"), ("Coucher", "coucher")):
             names = [x for x in d.get("sommets", []) if x[key]["top"]]
             if names:
+                tendance = all(x[key].get("src") != "AROME" for x in names)
+                tag = ' <span class="tag">tendance ECMWF, peu fiable</span>' if tendance else ' <span class="tag ok">AROME</span>'
                 items.append(f"<li><b>{day}</b> · {kind.lower()} {names[0][key]['heure']} dégagé : "
-                             f"{escape(', '.join(x['nom'] for x in names))}</li>")
+                             f"{escape(', '.join(x['nom'] for x in names))}{tag}</li>")
         long_clear = [x for x in d.get("sommets", []) if "Dégagé de" in x["texte"]]
         if long_clear and not any(x["lever"]["top"] for x in d.get("sommets", [])):
             x = long_clear[0]
@@ -121,11 +137,17 @@ def page(report: dict) -> str:
         bad_html = "".join(
             f"<li><b>{escape(s['nom'])}</b> {chip(r, False)} — {escape(' · '.join(r['reasons']))}</li>" for s, r in bad
         )
-        src = tops[0][1]["source"] if tops else (d["all"][0][1]["source"] if d["all"] else "—")
+        sit = d.get("situation") or {}
+        sit_html = ""
+        if sit.get("texte"):
+            src_sit = "profils AROME" if sit.get("source") == "AROME" else "ECMWF, sans profil fin"
+            sit_html = (f'<div class="sit"><b>Situation</b> <span class="muted">({src_sit}, 6h-16h)</span>'
+                        f'<ul>{"".join(f"<li>{escape(t)}</li>" for t in sit["texte"])}</ul></div>')
         days_html.append(f"""
   <section>
     <h2>{escape(d['title'])}</h2>
-    <p class="conf">{escape(SOURCE_TXT.get(src, ''))}</p>
+    <p class="conf">Prévision : {escape(d.get('couverture', ''))}</p>
+    {sit_html}
     {intro}
     {''.join(card(s, r) for s, r in tops)}
     {f'<details><summary>À éviter ({len(bad)})</summary><ul>{bad_html}</ul></details>' if bad else ''}
@@ -184,6 +206,11 @@ def page(report: dict) -> str:
   .lg .h {{ display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:4px; }}
   .pep li {{ margin:.3em 0; }}
   .cam iframe {{ width:100%; height:240px; border:0; border-radius:12px; }}
+  .strip .faded {{ opacity:.4; }}
+  .tag {{ font-size:.72rem; border:1px solid currentColor; border-radius:6px; padding:0 5px; color:var(--muted); }}
+  .tag.ok {{ color:#1f9d55; }}
+  .sit {{ background:var(--card); border-radius:12px; padding:10px 14px; margin:8px 0; font-size:.9rem; }}
+  .sit ul {{ margin:.3em 0 0; padding-left:1.1em; }} .sit li {{ margin:.25em 0; }}
 </style></head>
 <body><main>
   <h1>Où sortir en Basse-Terre</h1>
@@ -197,16 +224,30 @@ def page(report: dict) -> str:
   <h2>Toutes les activités</h2>
   <div class="table"><table><tr><th></th>{head_cells}</tr>{''.join(rows)}</table></div>
   <footer>
-    <p><b>Comment c'est calculé.</b> Pour chaque activité, on lit la prévision heure par heure aux points du parcours
-    (et en amont pour les rivières), puis on cherche l'heure de départ qui donne le meilleur créneau sur la durée de la sortie.
-    Le score baisse avec la pluie, le nuage au sommet, les rafales et l'air instable. Pour les rivières, la pluie tombée en amont
-    dans les 24 h avant le départ ou pendant la sortie passe l'activité en « Non ».</p>
-    <p><b>Sommets.</b> On lit le profil vertical AROME (humidité et fraction nuageuse à chaque niveau) au-dessus du sommet,
-    à son altitude réelle. Dans le nuage : nuage ≥ 50 % ou humidité ≥ 95 %. Dégagé : nuage &lt; 20 % et humidité &lt; 88 %.
-    « Au-dessus des nuages » : dégagé au sommet avec une couche nuageuse plus bas côté au vent. Lever et coucher calculés
-    pour l'altitude du sommet ; l'horizon est jugé sur les nuages bas et moyens en mer (est au lever, ouest au coucher).</p>
-    <p><b>Limites.</b> La maille de 2,5 km ne voit pas chaque ravine, et un grain local peut toujours passer.
-    Coordonnées des spots approximatives. Les seuils seront ajustés au fil des sorties.</p>
+    <h2>Comment c'est calculé, et ce qui reste approximatif</h2>
+    <p><b>Modèles.</b> AROME Outre-Mer Antilles (Météo-France, maille 2,5 km) : le seul modèle qui voit le relief de la
+    Basse-Terre ; il va jusqu'à 48 h après son heure de calcul. Au-delà : ECMWF (Open-Meteo), maille 9 à 25 km, qui voit
+    l'île comme une bosse. La ligne « Prévision » de chaque jour indique quelles heures viennent de quel modèle.
+    Les heures ECMWF sont pâlies sur les barres des sommets.</p>
+    <p><b>Pluie en probabilités.</b> Un modèle à 2,5 km place une averse tropicale à quelques km près. On lit donc les
+    9 mailles autour de chaque point (±2,5 km), pour le dernier run AROME et le précédent : jusqu'à 18 scénarios par
+    heure. La pluie retenue est le 70e percentile (90e en amont des rivières, par prudence), et le « risque d'averse »
+    la part des scénarios à 0,5 mm/h ou plus. Au-delà d'AROME, les 51 scénarios de l'ensemble ECMWF.
+    Ces pourcentages sont bruts : ils ne sont pas encore calibrés sur ce qui est réellement tombé.</p>
+    <p><b>Sommets.</b> Profil vertical AROME (humidité et fraction nuageuse sur 19 niveaux) au-dessus du sommet,
+    interpolé à son altitude réelle (le relief du modèle est lissé, donc trop bas). Dans le nuage : nuage ≥ 50 % ou
+    humidité ≥ 95 %. Dégagé : nuage &lt; 20 % et humidité &lt; 88 %. « Au-dessus des nuages » : dégagé au sommet avec
+    une couche nuageuse plus bas côté au vent. Les niveaux de pression sont espacés de 250 à 500 m : l'altitude exacte
+    de la base et du sommet des nuages est approximative. Au-delà d'AROME, l'état est estimé grossièrement
+    (humidité vers 1 500 m et nuages bas ECMWF, seuils sévères) : simple tendance.</p>
+    <p><b>Situation.</b> Lue sur la colonne d'air en mer à l'est de l'île, dans l'alizé non perturbé : force de l'alizé
+    vers 1 000 m, hauteur de la couche humide (cumulus d'alizé), humidité vers 3 000 m, poussières sahariennes (CAMS).
+    Les règles d'interprétation (alizé fort = pluie au vent et abri sous le vent ; alizé faible = averses thermiques
+    l'après-midi) viennent des études de terrain sur la Guadeloupe et la Dominique.</p>
+    <p><b>Lever et coucher.</b> Calculés pour l'altitude du sommet. L'horizon est jugé sur les nuages bas et moyens
+    en mer (à l'est au lever, à l'ouest au coucher).</p>
+    <p><b>Limites.</b> Les seuils sont des valeurs de départ, à ajuster avec la webcam et vos sorties. Les coordonnées
+    des spots sont approximatives. Un grain local peut toujours passer entre les mailles.</p>
     <p><b>Avant de partir :</b> vigilance sur <a href="https://meteofrance.gp">meteofrance.gp</a>
     et état des sentiers sur <a href="https://www.randoguadeloupe.gp">randoguadeloupe.gp</a>.</p>
     {f'<p>Non proposées :</p><ul>{exclus}</ul>' if exclus else ''}

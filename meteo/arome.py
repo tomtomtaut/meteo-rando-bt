@@ -39,26 +39,39 @@ def _exists(u: str) -> bool:
         return False
 
 
-def find_run(now: datetime | None = None) -> tuple[datetime, int] | None:
-    """Run le plus récent dont SP1 et SP2 sont publiés jusqu'à au moins +36h.
+AVAILABILITY: dict[str, bool] = {}  # run -> publié ? (pour régler l'heure du rapport)
+
+
+def find_run(now: datetime | None = None, before: datetime | None = None,
+             paquets=PAQUETS) -> tuple[datetime, int] | None:
+    """Run le plus récent (antérieur à `before` si donné) dont les paquets sont publiés jusqu'à au moins +36h.
 
     Renvoie (run, échéance max disponible)."""
     now = now or datetime.now(timezone.utc)
     latest = now.replace(minute=0, second=0, microsecond=0)
     latest -= timedelta(hours=latest.hour % 3)
-    for k in range(10):
+    for k in range(12):
         run = latest - timedelta(hours=3 * k)
-        if not all(_exists(url(run, p, 36)) for p in PAQUETS):
+        if before is not None and run >= before:
+            continue
+        ok = all(_exists(url(run, p, 36)) for p in paquets)
+        AVAILABILITY[run.isoformat()] = ok
+        if not ok:
             continue
         for hmax in (48, 45, 42, 39, 36):
-            if all(_exists(url(run, p, hmax)) for p in PAQUETS):
+            if all(_exists(url(run, p, hmax)) for p in paquets):
                 log.info("Run AROME retenu : %s (jusqu'à +%dh)", run.isoformat(), hmax)
                 return run, hmax
     return None
 
 
+NB = 1  # rayon du voisinage en mailles : 3x3 = ±2,5 km (méthode de voisinage, cf. README)
+CENTER = (2 * NB + 1) ** 2 // 2
+
+
 class _Extractor:
-    """Lit un GRIB2 et renvoie, pour chaque champ, les valeurs aux points demandés."""
+    """Lit un GRIB2 et renvoie, pour chaque champ, les valeurs aux points demandés
+    et dans les mailles voisines (tableau (P, 9) : la maille du point est au centre)."""
 
     def __init__(self, points: list[tuple[float, float]]):
         self.points = points
@@ -70,10 +83,18 @@ class _Extractor:
             for k in ("gridType", "Ni", "Nj", "latitudeOfFirstGridPointInDegrees", "longitudeOfFirstGridPointInDegrees")
         )
         if key not in self._idx_cache:
+            ni, nj = eccodes.codes_get(gid, "Ni"), eccodes.codes_get(gid, "Nj")
             idx, info = [], []
             for lat, lon in self.points:
                 n = eccodes.codes_grib_find_nearest(gid, lat, lon)[0]
-                idx.append(int(n.index))
+                c = int(n.index)
+                j, i = divmod(c, ni)
+                row = []
+                for dj in range(-NB, NB + 1):
+                    for di in range(-NB, NB + 1):
+                        jj, ii = j + dj, i + di
+                        row.append(jj * ni + ii if 0 <= jj < nj and 0 <= ii < ni else c)
+                idx.append(row)
                 info.append({"lat": float(n.lat), "lon": float(n.lon), "dist_km": round(float(n.distance), 2)})
             self._idx_cache[key] = (np.array(idx), info)
         return self._idx_cache[key]
@@ -187,36 +208,42 @@ def to_series(run: datetime, hmax: int, results: dict, inventory: dict, n_points
             lambda s, t, l, n: s == "r" and t == "heightAboveGround" and l == 2,
         ]),
         "t2m": _pick(inventory, [lambda s, t, l, n: s in ("2t", "t2m"), lambda s, t, l, n: s == "t" and t == "heightAboveGround" and l == 2]),
-        "cape": _pick(inventory, [lambda s, t, l, n: "cape" in s, lambda s, t, l, n: "convective available" in n]),
-        "gust": _pick(inventory, [lambda s, t, l, n: s in ("fg10", "i10fg", "10fg", "gust")]),
-        "efg": _pick(inventory, [lambda s, t, l, n: s in ("efg10", "10efg")]),
-        "nfg": _pick(inventory, [lambda s, t, l, n: s in ("nfg10", "10nfg")]),
+        "cape": _pick(inventory, [lambda s, t, l, n: "cape" in s.lower(), lambda s, t, l, n: "convective available" in n]),
+        "gust": _pick(inventory, [lambda s, t, l, n: s in ("fg10", "i10fg", "10fg", "gust", "max_i10fg"),
+                                  lambda s, t, l, n: "wind gust" in n and "eastward" not in n and "northward" not in n]),
+        "efg": _pick(inventory, [lambda s, t, l, n: s in ("efg10", "10efg", "max_10efg")]),
+        "nfg": _pick(inventory, [lambda s, t, l, n: s in ("nfg10", "10nfg", "max_10nfg")]),
     }
     log.info("Champs AROME utilisés : %s", keys)
 
     hours = list(range(0, hmax + 1))
     times = [run + timedelta(hours=h) for h in hours]
-    nan = np.full(n_points, np.nan)
+    nan = np.full((n_points, (2 * NB + 1) ** 2), np.nan)
 
-    def grab(key):
+    def grab_nb(key):
         if key is None:
             return None
         pkg = inventory[key]["paquet"]
-        return np.array([results.get((pkg, h), {}).get(key, nan) for h in hours])
+        return np.array([results.get((pkg, h), {}).get(key, nan) for h in hours])  # (T, P, 9)
+
+    def grab(key):
+        v = grab_nb(key)
+        return None if v is None else v[:, :, CENTER]
 
     out = {"times": times, "keys": keys}
 
     # Précipitations : cumul depuis le début du run, ou cumul horaire, selon le stepRange.
-    pr = grab(keys["precip"])
+    pr = grab_nb(keys["precip"])
     if pr is not None:
         steps = [s for s in inventory[keys["precip"]]["steps"] if s != "…"]
         cumulative = any(s.startswith("0-") and s != "0-1" for s in steps)
         if cumulative:
-            hourly = np.vstack([np.full(n_points, np.nan), np.diff(pr, axis=0)])
-            hourly = np.clip(hourly, 0, None)
+            hourly = np.concatenate([np.full((1,) + pr.shape[1:], np.nan), np.diff(pr, axis=0)])
         else:
-            hourly = np.clip(pr, 0, None)
-        out["precip"] = hourly
+            hourly = pr
+        hourly = np.clip(hourly, 0, None)
+        out["precip_nb"] = hourly            # (T, P, 9) : la pluie dans le voisinage de chaque point
+        out["precip"] = hourly[:, :, CENTER]
         out["precip_mode"] = "cumul depuis le run" if cumulative else "horaire"
 
     if (v := grab(keys["lcc"])) is not None:
@@ -261,6 +288,8 @@ def to_profiles(run: datetime, results: dict, inventory: dict, hours: list[int],
         "z": family([lambda s, n: s in ("z", "gh"), lambda s, n: "geopotential" in n]),
         "cc": family([lambda s, n: s in ("cc", "ccl", "tcc"),
                       lambda s, n: "cloud" in n and ("fraction" in n or "cover" in n)]),
+        "u": family([lambda s, n: s == "u"]),
+        "v": family([lambda s, n: s == "v"]),
     }
     used = {v: sorted(f.keys()) for v, f in fams.items()}
     levels = sorted(set(fams["rh"]) | set(fams["cc"]), reverse=True)  # 1000 hPa d'abord = bas
@@ -274,9 +303,11 @@ def to_profiles(run: datetime, results: dict, inventory: dict, hours: list[int],
             rows = []
             for lev in levels:
                 key = fam.get(lev)
-                rows.append(results.get((inventory[key]["paquet"], h), {}).get(key, nan) if key else nan)
+                val = results.get((inventory[key]["paquet"], h), {}).get(key) if key else None
+                rows.append(nan if val is None else val[:, CENTER])
             return np.array(rows, dtype=float)
         rh, cc, t, z = stack("rh"), stack("cc"), stack("t"), stack("z")
+        u, v = stack("u"), stack("v")
         if np.all(np.isnan(rh)) and np.all(np.isnan(cc)):
             continue
         if fams["z"]:
@@ -289,5 +320,5 @@ def to_profiles(run: datetime, results: dict, inventory: dict, hours: list[int],
             cc = cc * 100 if np.nanmax(cc) <= 1.01 else cc
         if not np.all(np.isnan(rh)):
             rh = rh * 100 if np.nanmax(rh) <= 1.01 else rh
-        profiles[run + timedelta(hours=h)] = {"z": z, "rh": rh, "cc": cc, "t": t, "p": levels}
+        profiles[run + timedelta(hours=h)] = {"z": z, "rh": rh, "cc": cc, "t": t, "u": u, "v": v, "p": levels}
     return {"profiles": profiles, "used": used}
