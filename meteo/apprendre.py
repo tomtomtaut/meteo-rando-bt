@@ -200,6 +200,9 @@ def page() -> str:
       <b>au-dessus des nuages</b> (sommet plus haut que la couche : mer de nuages en dessous), <b>incertain</b> (à
       ±100 m du haut de la couche), <b>dans le nuage</b>. Si le profil AROME à l'altitude réelle montre déjà du nuage,
       il prime sur l'estimation de la couche.</p>
+      <p>Dans les pépites, « dégagé » veut dire ciel clair autour du sommet, vue jusqu'à la côte ; « au-dessus des
+      nuages » veut dire que le sommet dépasse la couche : mer de nuages sous toi, vue sur les autres sommets et îles,
+      mais pas sur la côte.</p>
       <p>Lever et coucher sont calculés pour l'altitude du sommet (le soleil s'y lève un peu plus tôt). L'horizon est
       jugé sur les nuages bas et moyens en mer : à l'est au lever, à l'ouest au coucher.</p>
       <p class="piege"><b>Piège.</b> Au-delà d'AROME (cases pâles), l'état est une tendance grossière.</p>"""))

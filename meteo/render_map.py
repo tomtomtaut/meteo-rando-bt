@@ -233,7 +233,7 @@ function panel() {
   });
   h += "</div>";
   if (D.pepites && D.pepites.length) {
-    h += `<div class="card"><h3>Les pépites (levers et couchers dégagés)</h3><ul class="small">`;
+    h += `<div class="card"><h3>Les pépites (levers et couchers dégagés ou au-dessus des nuages)</h3><ul class="small">`;
     D.pepites.forEach(p => h += `<li><b>${p.jour}</b> · ${p.texte} <span class="tag ${p.fiable ? "ok" : ""}">${p.fiable ? "AROME" : "tendance, peu fiable"}</span></li>`);
     h += "</ul></div>";
   }

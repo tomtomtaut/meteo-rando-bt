@@ -268,3 +268,17 @@ def day_summary(sommet: dict, i: int, states: dict, merged, d: date, i_east, i_w
         "nom": sommet["nom"], "alt": sommet["alt"], "hours": hours, "lever": lever, "coucher": coucher,
         "texte": ", ".join(texte), "source": "AROME" if src == {"AROME"} else ("mixte" if "AROME" in src else "ECMWF"),
     }
+
+
+VUE = {"degage": "dégagé", "mer": "au-dessus des nuages"}
+
+
+def sun_text(kind: str, sums: list[dict], key: str) -> str:
+    """« coucher 17h38 au-dessus des nuages : La Soufrière · dégagé : Piton Baille-Argent ».
+
+    « dégagé » = ciel clair autour du sommet ; « au-dessus des nuages » = sommet qui dépasse la couche
+    nuageuse : mer de nuages en dessous, vue sur les autres îles mais pas forcément sur la côte."""
+    groups: dict[str, list[str]] = {}
+    for x in sums:
+        groups.setdefault(VUE.get(x[key]["etat"], "dégagé"), []).append(x["nom"])
+    return f"{kind} {sums[0][key]['heure']} " + " · ".join(f"{v} : {', '.join(n)}" for v, n in groups.items())

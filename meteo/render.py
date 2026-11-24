@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from html import escape
 
-from .sommets import STATES, FIRST_H, LAST_H
+from .sommets import STATES, FIRST_H, LAST_H, VUE, sun_text
 
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
@@ -154,7 +154,8 @@ def sommet_row(x: dict) -> str:
         cells.append(f'<span class="h{faded}" style="background:{col}" data-tip="{escape(tip)}">{hr["h"]}</span>')
 
     def sun(icon, s):
-        mark = '<b class="ok">✓</b>' if s["top"] else '<span class="no">✗</span>'
+        mark = (f'<b class="ok">✓</b> <span class="muted">{VUE.get(s["etat"], "")}</span>' if s["top"]
+                else '<span class="no">✗</span>')
         hz = "" if s["horizon"] is None else ("" if s["horizon"] else " (horizon bouché)")
         return f"{icon} {s['heure']} {mark}{hz}"
 
@@ -185,8 +186,7 @@ def pepites_list(report: dict) -> list[dict]:
         for kind, key in (("Lever", "lever"), ("Coucher", "coucher")):
             names = [x for x in d.get("sommets", []) if x[key]["top"]]
             if names:
-                out.append({"jour": day, "texte": f"{kind.lower()} {names[0][key]['heure']} dégagé : "
-                            + ", ".join(x["nom"] for x in names),
+                out.append({"jour": day, "texte": sun_text(kind.lower(), names, key),
                             "fiable": any(x[key].get("src") == "AROME" for x in names)})
     return out
 
@@ -200,14 +200,13 @@ def pepites(report: dict) -> str:
             if names:
                 tendance = all(x[key].get("src") != "AROME" for x in names)
                 tag = ' <span class="tag">tendance ECMWF, peu fiable</span>' if tendance else ' <span class="tag ok">AROME</span>'
-                items.append(f"<li><b>{day}</b> · {kind.lower()} {names[0][key]['heure']} dégagé : "
-                             f"{escape(', '.join(x['nom'] for x in names))}{tag}</li>")
+                items.append(f"<li><b>{day}</b> · {escape(sun_text(kind.lower(), names, key))}{tag}</li>")
         long_clear = [x for x in d.get("sommets", []) if "Dégagé de" in x["texte"]]
         if long_clear and not any(x["lever"]["top"] for x in d.get("sommets", [])):
             x = long_clear[0]
             items.append(f"<li><b>{day}</b> · {escape(x['nom'])} : {escape(x['texte'])}</li>")
     if not items:
-        return '<p class="muted">Pas de fenêtre dégagée prévue sur les sommets dans les 3 jours.</p>'
+        return '<p class="muted">Pas de lever ni de coucher dégagé ou au-dessus des nuages prévu sur les sommets dans les 3 jours.</p>'
     return f"<ul class='pep'>{''.join(items)}</ul>"
 
 

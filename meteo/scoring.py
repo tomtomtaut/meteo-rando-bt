@@ -357,7 +357,9 @@ def cloud_reasons(spot: dict, m: Merged, tis: list[int], dur: int) -> list[str]:
         if n_in:
             out.append(f"{nom} dans le nuage {n_in} h sur {dur}")
         elif n_clear == len(known):
-            out.append(f"{nom} dégagé")
+            n_mer = sum(x == "mer" for x in known)
+            out.append(f"{nom} au-dessus des nuages" if n_mer == len(known) else
+                       f"{nom} dégagé" if n_mer == 0 else f"{nom} dégagé ou au-dessus des nuages")
         else:
             out.append(f"{nom} : nuages partiels ({len(known) - n_clear} h incertaines)")
     return out

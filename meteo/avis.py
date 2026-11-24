@@ -17,6 +17,7 @@ import numpy as np
 
 from . import lecture, scoring
 from .heure import TZ
+from .sommets import sun_text
 
 CLASSES = [(1, "sec"), (5, "quelques averses"), (15, "pluvieux"), (math.inf, "très pluvieux")]  # mm sur 6h-18h
 ENS_WET = 5          # mm sur la journée : seuil « journée mouillée » pour compter les scénarios
@@ -203,7 +204,7 @@ def day_avis(d: date, now: datetime, m: scoring.Merged, spots: list[dict], top, 
     for key, nom in (("lever", "lever"), ("coucher", "coucher")):
         clear = [x for x in sommets_day if x[key]["top"]]
         if clear:
-            soleil.append(f"{nom} {clear[0][key]['heure']} dégagé : {', '.join(x['nom'] for x in clear)}")
+            soleil.append(sun_text(nom, clear, key))
     # le tableau donne déjà la mer et les poussières : on ne les répète pas dans la lecture
     lect = [t for t in sit.get("texte", []) if not t.startswith(("Mer au large", "Brume de sable"))]
     return {"chiffres": ch, "lecture": lect, "source": sit.get("source"),
