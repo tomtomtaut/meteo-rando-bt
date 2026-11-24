@@ -113,9 +113,11 @@ function cellText(i) {
   const src = day.src[h];
   let t = `<b>${CATS[state.cat].label} : ${sc === null ? "—" : sc}/100</b> · ${day.hours[h]}h · ${SRC[src] || "pas de donnée"}<br>`;
   const rain = `Pluie : ${fmt(R("pluie"))} mm/h` + (R("proba") !== null ? ` · risque d'averse ${R("proba")} %` : "");
-  const alt = c.alt !== null ? `~${c.alt} m (relief du modèle)` : "altitude inconnue";
-  const cloud = R("etat") ? `À l'altitude de la case (${alt}) : ${ETAT[R("etat")] || R("etat")}` +
-    (R("nuage_case") !== null ? ` — nuage ${R("nuage_case")} %, humidité ${R("hum_case")} %` : "") : "";
+  const alt = c.alt !== null ? `${c.alt} m` : "inconnu";
+  const haut = R("haut_nuages") === 9999 ? "pas de plafond net" : (R("haut_nuages") !== null ? `~${R("haut_nuages")} m` : "—");
+  const layer = R("base_nuages") !== null ? `<br>Couche nuageuse d'alizé : base ~${R("base_nuages")} m, haut ${haut}` : "";
+  const cloud = R("etat") ? `Relief moyen de la case : ${alt} — à cette hauteur : ${ETAT[R("etat")] || R("etat")}` +
+    (R("nuage_case") !== null ? ` (nuage ${R("nuage_case")} %, humidité ${R("hum_case")} %)` : "") + layer : "";
   const sea = [`Vagues : ${fmt(R("vagues"))} m`, `Houle : ${fmt(R("houle"))} m · ${fmt(R("periode"), 0)} s · de ${R("dir_houle") || "—"}`,
                `Vent : ${fmt(R("vent"), 0)} km/h (${R("vent") === null ? "—" : Math.round(R("vent") / 1.852)} nœuds) · rafales ${fmt(R("rafales"), 0)} km/h`, rain];
   const lines = {

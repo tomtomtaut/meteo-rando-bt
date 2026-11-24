@@ -79,8 +79,15 @@ def day_situation(d: date, profiles: dict, i_up: int | None, merged, i_up_ec: in
             rows.append({"wind": g("ws925"), "moist_top": float("nan"), "inversion": float("nan"), "rh700": g("rh700")})
     if not rows:
         return {"texte": [], "source": None}
+    from .sommets import cloud_layer  # base = LCL de l'air en mer, haut = sommet de la couche humide
+    layers = [cloud_layer(profiles.get(t), merged, merged.index[t], i_up)
+              for t in hours if t in merged.index and i_up is not None]
+    base = _mean([b for b, _ in layers])
+    tops = [h for _, h in layers if not math.isnan(h)]
     wind = _mean([r["wind"] for r in rows])
-    top = _mean([r["moist_top"] for r in rows])
+    # même calcul que pour l'état des sommets (sommets.cloud_layer), pour ne jamais se contredire
+    finite = [h for h in tops if not math.isinf(h)]
+    top = (float("inf") if tops and not finite else _mean(finite)) if tops else float("nan")
     inv = _mean([r["inversion"] for r in rows])
     rh700 = _mean([r["rh700"] for r in rows])
 
@@ -98,13 +105,23 @@ def day_situation(d: date, profiles: dict, i_up: int | None, merged, i_up_ec: in
         else:
             txt.append(f"Alizé modéré (~{wind:.0f} km/h vers 1 000 m) : régime classique. Nuages accrochés "
                        "côté au vent et sur les sommets, éclaircies plus nettes côté sous-le-vent.")
-    if not math.isnan(top):
+    if not math.isnan(top) and math.isinf(top):
+        txt.append("Air humide sur toute l'épaisseur, sans plafond net : sommets au vent dans le nuage.")
+    elif not math.isnan(top):
+        lo, hi = (min(finite), max(finite)) if finite else (top, top)
+        htxt = f"~{r100(top)} m" if hi - lo < 300 else f"entre ~{r100(lo)} et ~{r100(hi)} m selon l'heure"
+        b = f"base ~{r100(base)} m (niveau de condensation de l'air en mer), " if not math.isnan(base) else ""
         if top < summit_alt - 100:
-            txt.append(f"Couche humide (cumulus d'alizé) jusqu'à ~{r100(top)} m seulement : les plus hauts sommets "
-                       "peuvent dépasser la couche, surtout tôt le matin.")
+            txt.append(f"Couche nuageuse d'alizé : {b}haut {htxt}. Les reliefs au vent entre ces deux "
+                       f"altitudes sont dans le nuage ; la Soufrière ({summit_alt:.0f} m) dépasse la couche : "
+                       "au-dessus des nuages possible.")
+        elif top <= summit_alt + 100:
+            txt.append(f"Couche nuageuse d'alizé : {b}haut {htxt}, à hauteur de la Soufrière "
+                       f"({summit_alt:.0f} m) : sommet à la limite, entre nuage et éclaircies.")
         else:
-            txt.append(f"Couche humide jusqu'à ~{r100(top)} m : au-dessus de la Soufrière, qui a donc de bonnes "
-                       "chances d'être prise dans le nuage.")
+            txt.append(f"Couche nuageuse d'alizé : {b}haut {htxt}, en moyenne au-dessus de la Soufrière "
+                       f"({summit_alt:.0f} m) : les sommets au vent sont surtout dans le nuage (détail heure par "
+                       "heure sur les barres des sommets).")
     elif not math.isnan(inv):
         txt.append(f"Inversion vers ~{r100(inv)} m.")
     dmax = max((dust.get(t, 0) or 0 for t in hours), default=0) if dust else 0

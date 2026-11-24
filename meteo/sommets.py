@@ -110,16 +110,84 @@ def state_from_surface(rh850: float, lcc: float) -> str | None:
     return "incertain"
 
 
-def compute_states(points_alt: dict[int, float], profiles: dict, merged, i_windward: int | None) -> dict:
+# --- Couche nuageuse d'alizé, calculée sur l'air en amont (méthode validée dans la littérature) ----
+# Base : niveau de condensation par soulèvement (LCL) de l'air de basse couche en mer, formule d'Espy
+#   (125 m par °C d'écart température / point de rosée). C'est l'indicateur de la base des nuages sur
+#   les reliefs au vent utilisé pour les montagnes de Porto Rico (Miller et al. 2018).
+# Haut : sommet de la couche humide, plafonnée par l'inversion des alizés (AMS Glossary ; Hawaï).
+# Un relief au vent entre la base et le haut est dans le nuage orographique.
+MARGE_HAUT = 100   # m : marge autour du haut de la couche (choix de Tomas ; niveaux du modèle espacés de 250-500 m)
+MARGE_BASE = 50    # m : condensation un peu au-dessus du LCL réel (sursaturation)
+
+
+def dewpoint(t_c: float, rh: float) -> float:
+    """Point de rosée (Magnus, coefficients d'Alduchov et Eskridge)."""
+    a, b = 17.625, 243.04
+    g = math.log(max(rh, 1) / 100) + a * t_c / (b + t_c)
+    return b * g / (a - g)
+
+
+def cloud_layer(prof: dict | None, merged, ti: int, i_up: int) -> tuple[float, float]:
+    """(base, haut) de la couche nuageuse d'alizé en amont, en m. NaN si inconnu, inf si pas de haut net."""
+    temps, rhs, alts = [], [], []
+    if "t2m" in merged.data and "rh" in merged.data:
+        t2, r2 = merged.data["t2m"][ti, i_up], merged.data["rh"][ti, i_up]
+        if not (math.isnan(t2) or math.isnan(r2)):
+            temps.append(t2), rhs.append(r2), alts.append(2)
+    top = float("nan")
+    if prof is not None:
+        z, rh, t = prof["z"][:, i_up], prof["rh"][:, i_up], prof["t"][:, i_up]
+        order = np.argsort(z)
+        z, rh, t = z[order], rh[order], t[order]
+        # « mean-layer LCL » : moyenne de l'air entre la surface et 500 m (Miller et al. 2018)
+        for k in range(len(z)):
+            if 0 < z[k] <= 500 and not (math.isnan(t[k]) or math.isnan(rh[k])):
+                temps.append(t[k] - 273.15 if t[k] > 150 else t[k]), rhs.append(rh[k]), alts.append(z[k])
+        sel = (z >= 500) & (z <= 3500) & ~np.isnan(rh)
+        if sel.any():
+            zz, rr = z[sel], rh[sel]
+            below = rr >= 75
+            if below.all():
+                top = float("inf")
+            elif below[0]:
+                k = int(np.argmin(below))
+                frac = (rr[k - 1] - 75) / max(rr[k - 1] - rr[k], 1e-6)
+                top = float(zz[k - 1] + frac * (zz[k] - zz[k - 1]))
+    if not temps:
+        return float("nan"), top
+    tm, rm, zm = float(np.mean(temps)), float(np.mean(rhs)), float(np.mean(alts))
+    base = zm + 125 * (tm - dewpoint(tm, rm))
+    return base, top
+
+
+def state_from_layer(alt: float, base: float, top: float, model_state: str | None) -> str | None:
+    if model_state == "nuage" or math.isnan(base) or math.isnan(top):
+        return model_state
+    if alt < base - MARGE_BASE:
+        return model_state if model_state in ("incertain",) else "degage"   # sous la base des nuages
+    if alt <= top - MARGE_HAUT:
+        return "nuage"                                                       # dans le nuage orographique
+    if alt < top + MARGE_HAUT:
+        return "incertain"                                                   # à la limite du haut de la couche
+    return "mer"                                                             # au-dessus de la couche
+
+
+def compute_states(points_alt: dict[int, float], profiles: dict, merged, i_windward: int | None,
+                   i_up: int | None = None) -> dict:
     """{(i_point, time_utc): (state, détails, source)} pour chaque heure de la base fusionnée."""
     out = {}
+    i_up = i_windward if i_up is None else i_up
     for t in merged.times:
         prof = profiles.get(t)
         ti = merged.index[t]
+        base, top = cloud_layer(prof, merged, ti, i_up) if i_up is not None else (float("nan"), float("nan"))
         for i, alt in points_alt.items():
             if prof is not None:
                 st, det = state_from_profile(prof, i, alt, i_windward)
                 if st is not None:
+                    st = state_from_layer(alt, base, top, st)
+                    det = {**det, "base": None if math.isnan(base) else round(base, -1),
+                           "haut": None if math.isnan(top) else (9999 if math.isinf(top) else round(top, -1))}
                     out[(i, t)] = (st, det, "AROME")
                     continue
             rh850 = float(merged.data["rh850"][ti, i]) if "rh850" in merged.data else float("nan")

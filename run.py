@@ -187,7 +187,7 @@ def main():
     pts_alt = high_points(cfg, pts)
     for i, a in zip(grid_idx, grid_alts):
         pts_alt.setdefault(i, (0 if np.isnan(a) else a) + 20)
-    merged.summit_state = sommets.compute_states(pts_alt, profiles, merged, idx_h.get("au_vent"))
+    merged.summit_state = sommets.compute_states(pts_alt, profiles, merged, idx_h.get("au_vent"), idx_h.get("est"))
 
     local = now.astimezone(scoring.TZ)
     today = local.date()

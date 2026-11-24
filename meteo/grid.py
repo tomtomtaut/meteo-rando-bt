@@ -149,7 +149,8 @@ def compute(merged, cell_idx: list[int], cell_alts: list[float], days: list[date
         day = {"date": d.isoformat(), "hours": HOURS, "src": [],
                "score": {k: [] for k in LAYERS},
                "raw": {k: [] for k in ("pluie", "proba", "nuages_bas", "nuage_case", "hum_case", "etat",
-                                       "rafales", "pluie24", "vagues", "houle", "periode", "dir_houle", "vent")}}
+                                       "rafales", "pluie24", "vagues", "houle", "periode", "dir_houle", "vent",
+                                       "base_nuages", "haut_nuages")}}
         for h in HOURS:
             t = datetime(d.year, d.month, d.day, h, tzinfo=TZ).astimezone(timezone.utc)
             ti = merged.index.get(t)
@@ -205,6 +206,8 @@ def compute(merged, cell_idx: list[int], cell_alts: list[float], days: list[date
                 raw["nuage_case"].append(det.get("cc"))
                 raw["hum_case"].append(det.get("rh"))
                 raw["etat"].append(st[0] if st else None)
+                raw["base_nuages"].append(det.get("base"))
+                raw["haut_nuages"].append(det.get("haut"))
                 raw["rafales"].append(_r(e_r["gust"], 0))
                 raw["pluie24"].append(_r(p24))
                 for k in ("vagues", "houle", "periode", "dir_houle"):

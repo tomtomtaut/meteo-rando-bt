@@ -82,6 +82,9 @@ def sommet_row(x: dict) -> str:
         lab, col = STATES.get(hr["state"], STATES[None])
         det = hr.get("det") or {}
         tip = f"{hr['h']}h : {lab}" + (f" (nuage {det['cc']} %, humidité {det['rh']} %)" if det.get("cc") is not None else "")
+        if det.get("base") is not None:
+            haut = "pas de plafond net" if det.get("haut") == 9999 else (f"~{det['haut']:.0f} m" if det.get("haut") is not None else "?")
+            tip += f" · couche nuageuse : base ~{det['base']:.0f} m, haut {haut}"
         faded = ' faded' if hr.get("src") == "ECMWF" else ''
         cells.append(f'<span class="h{faded}" style="background:{col}" data-tip="{escape(tip)}">{hr["h"]}</span>')
 
@@ -321,10 +324,15 @@ def page(report: dict) -> str:
     heure. La pluie retenue est le 70e percentile (90e en amont des rivières, par prudence), et le « risque d'averse »
     la part des scénarios à 0,5 mm/h ou plus. Au-delà d'AROME, les 51 scénarios de l'ensemble ECMWF.
     Ces pourcentages sont bruts : ils ne sont pas encore calibrés sur ce qui est réellement tombé.</p>
-    <p><b>Sommets.</b> Profil vertical AROME (humidité et fraction nuageuse sur 19 niveaux) au-dessus du sommet,
-    interpolé à son altitude réelle (le relief du modèle est lissé, donc trop bas). Dans le nuage : nuage ≥ 50 % ou
-    humidité ≥ 95 %. Dégagé : nuage &lt; 20 % et humidité &lt; 88 %. « Au-dessus des nuages » : dégagé au sommet avec
-    une couche nuageuse plus bas côté au vent. Les niveaux de pression sont espacés de 250 à 500 m : l'altitude exacte
+    <p><b>Sommets.</b> Le relief du modèle est lissé (sommets trop bas) et l'air libre qu'il simule ne subit pas le
+    soulèvement forcé par le vrai relief : lu seul, il est trop optimiste. On place donc d'abord la couche nuageuse
+    d'alizé sur l'air en amont (en mer, à l'est), selon la méthode utilisée pour les montagnes de Porto Rico :
+    la <b>base</b> est le niveau de condensation par soulèvement (LCL) de l'air entre la surface et 500 m, formule
+    d'Espy (125 m par °C d'écart entre température et point de rosée) ; le <b>haut</b> est le sommet de la couche
+    humide (humidité &lt; 75 %), plafonnée par l'inversion des alizés. Un relief au vent entre la base et le haut
+    est dans le nuage orographique ; à ±100 m du haut, incertain ; au-dessus, au-dessus des nuages ; sous la base,
+    dégagé. Si le profil AROME à l'altitude réelle du sommet montre déjà du nuage (≥ 50 % ou humidité ≥ 95 %),
+    il prime. Les niveaux de pression sont espacés de 250 à 500 m : l'altitude exacte
     de la base et du sommet des nuages est approximative. Au-delà d'AROME, l'état est estimé grossièrement
     (humidité vers 1 500 m et nuages bas ECMWF, seuils sévères) : simple tendance.</p>
     <p><b>Mer.</b> Vagues et houle : Open-Meteo Marine (modèles de vagues Météo-France et ECMWF), cases de 5,5 km.
