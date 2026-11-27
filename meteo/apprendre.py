@@ -75,7 +75,8 @@ def _sec(anchor, title, badge, body) -> str:
     return f'<section id="{anchor}"><h2>{escape(title)} {badge}</h2>{body}</section>'
 
 
-def page() -> str:
+def content() -> tuple[list, str]:
+    """(sommaire, sections HTML) de « Comprendre », pour l'app."""
     pluie = _table(["Intensité", "Lecture"], _rng([(l, n) for l, n in lecture.PLUIE], "mm/h"))
     beau = _table(["Force", "Vent moyen", "Nom"], [(f, r, n) for (r, _), (_, f, n) in
                   zip(_rng([(l, f) for l, f, _ in lecture.BEAUFORT], "km/h"), lecture.BEAUFORT)])
@@ -315,40 +316,9 @@ def page() -> str:
       écart d'intensité entre AROME et ECMWF est normal ; c'est un désaccord sec / pluvieux qui compte. Et une
       confiance « élevée » reste une prévision : un grain isolé peut passer.</p>"""))
 
-    nav = " · ".join(f'<a href="#{a}">{t}</a>' for a, t in [
+    toc = [
         ("score", "score"), ("pluie", "pluie"), ("proba", "risque d'averse"), ("riviere", "rivières"),
         ("alize", "alizé"), ("couche", "couche nuageuse"), ("sommet", "sommets"), ("vent", "vent"),
         ("cape", "CAPE"), ("mer", "mer"), ("houle", "houle"), ("kite", "kite"), ("chaleur", "chaleur"),
-        ("poussieres", "poussières"), ("everesting", "Everesting"), ("modeles", "modèles"), ("confiance", "confiance")])
-
-    return f"""<!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Apprendre à lire — Où sortir en Guadeloupe</title>
-<style>
-  :root {{ --bg:#f6f5f1; --fg:#1d1d1b; --muted:#6b6b66; --card:#fff; --acc:#1f6f4a; }}
-  @media (prefers-color-scheme: dark) {{ :root {{ --bg:#141413; --fg:#ecebe6; --muted:#9c9b95; --card:#1f1f1d; --acc:#5cc492; }} }}
-  * {{ box-sizing:border-box; }}
-  body {{ margin:0; font:16px/1.5 -apple-system, system-ui, sans-serif; background:var(--bg); color:var(--fg); }}
-  main {{ max-width:760px; margin:0 auto; padding:16px; }}
-  h1 {{ font-size:1.5rem; margin:.2em 0; }}
-  h2 {{ font-size:1.1rem; margin:0 0 .4em; }}
-  section {{ background:var(--card); border-radius:12px; padding:12px 16px; margin:14px 0;
-    box-shadow:0 1px 3px rgba(0,0,0,.08); scroll-margin-top:12px; }}
-  section:target {{ outline:2px solid var(--acc); }}
-  table {{ border-collapse:collapse; width:100%; font-size:.88rem; margin:.5em 0; }}
-  td, th {{ padding:4px 6px; border-bottom:1px solid rgba(128,128,128,.2); text-align:left; }}
-  .b {{ font-size:.7rem; font-weight:600; border-radius:6px; padding:1px 6px; vertical-align:2px; white-space:nowrap; }}
-  .b.ech {{ background:#1f6f4a; color:#fff; }} .b.outil {{ background:#f0a500; color:#1d1d1b; }}
-  .src {{ font-size:.8rem; color:var(--muted); }} .src a {{ color:inherit; }}
-  .piege {{ font-size:.9rem; background:rgba(240,165,0,.12); border-radius:8px; padding:6px 10px; }}
-  .small {{ font-size:.85rem; }} .nav a {{ color:inherit; }} .toc {{ font-size:.85rem; line-height:1.9; }}
-  .toc a {{ color:var(--acc); }}
-</style></head>
-<body><main>
-  <p class="nav"><a href="index.html">Carte</a> · <a href="liste.html">Liste</a> · <b>Apprendre à lire</b></p>
-  <h1>Apprendre à lire les conditions</h1>
-  <p class="toc">{nav}</p>
-  {''.join(s)}
-</main></body></html>
-"""
+        ("poussieres", "poussières"), ("everesting", "Everesting"), ("modeles", "modèles"), ("confiance", "confiance")]
+    return toc, "".join(s)

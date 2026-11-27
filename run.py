@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from meteo import apprendre, arome, avis, ecmwf, everesting, grid, lecture, marine, render, render_map, scoring, situation, sommets, webcams
+from meteo import app, arome, avis, ecmwf, everesting, grid, lecture, marine, render, scoring, situation, sommets, webcams
 
 log = logging.getLogger("rapport")
 ROOT = Path(__file__).parent
@@ -260,9 +260,15 @@ def main():
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    (out / "liste.html").write_text(render.page(report), encoding="utf-8")
-    (out / "index.html").write_text(render_map.page(), encoding="utf-8")
-    (out / "apprendre.html").write_text(apprendre.page(), encoding="utf-8")
+    # Une seule page (l'app) ; les anciennes adresses renvoient vers elle
+    (out / "index.html").write_text(app.page(), encoding="utf-8")
+    (out / "manifest.webmanifest").write_text(app.MANIFEST, encoding="utf-8")
+    (out / "sw.js").write_text(app.SW, encoding="utf-8")
+    for f in (ROOT / "static").glob("*"):
+        (out / f.name).write_bytes(f.read_bytes())
+    for old, tab in (("liste.html", "activites"), ("apprendre.html", "comprendre")):
+        (out / old).write_text(f'<!DOCTYPE html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=index.html#{tab}">'
+                               f'<a href="index.html#{tab}">Ouvrir l\'app</a>', encoding="utf-8")
     (out / "grid.json").write_text(json.dumps(clean(grid_data), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     def geo(spot):
@@ -279,6 +285,8 @@ def main():
         "webcams": report["webcams"],
         "pepites": render.pepites_list(report),
         "everesting": ever,
+        "etats": {(k or "none"): list(v) for k, v in sommets.STATES.items()},
+        "pen_labels": scoring.PEN_LABELS,
         "days": [{
             "date": d["date"], "title": d["title"], "couverture": d["couverture"],
             "top": [s["id"] for s, _ in d["top"]],
@@ -286,7 +294,7 @@ def main():
                                                          "detail", "mesures", "lecture")}
                        for s, r in d["all"]},
             "situation": d["situation"], "avis": d["avis"],
-            "sommets": {x["nom"]: {"etats": {h["h"]: h["state"] for h in x["hours"]},
+            "sommets": {x["nom"]: {"alt": x["alt"], "etats": {h["h"]: h["state"] for h in x["hours"]},
                                    "details": {h["h"]: h["det"] for h in x["hours"]},
                                    "pourquoi": {h["h"]: h.get("why") for h in x["hours"]},
                                    "lever": x["lever"], "coucher": x["coucher"], "texte": x["texte"]}

@@ -18,8 +18,8 @@ en bas de la page.
 ## Fichiers
 - `spots.json` : les activités, leurs points (objectif et amont pour les rivières), durée, type. Coordonnées approximatives : à corriger librement.
 - `meteo/scoring.py` : tous les seuils en haut du fichier (pluie, nuage au sommet, rafales, crues).
-- `run.py` : lance tout et écrit `site/index.html` (carte), `site/liste.html`, `site/apprendre.html` (comment lire chaque chiffre), `site/data.json`, `site/grid.json`, `site/debug.json`.
-- `meteo/avis.py` : l'avis du jour (chiffres clés, lecture, confiance). `meteo/apprendre.py` : la page Apprendre à lire.
+- `run.py` : calcule tout et écrit le site : `index.html` (l'app : Le point, Carte, Activités, Comprendre), `data.json`, `grid.json`, `debug.json`, plus le manifeste et le service worker (app installable, dernier rapport gardé hors ligne).
+- `meteo/app.py` : l'app (une seule page). `meteo/avis.py` : l'avis du jour. `meteo/apprendre.py` : le contenu de « Comprendre ». `static/` : icônes.
 - `history/` : les scores de chaque soir, pour comparer avec ce qu'on a vécu sur le terrain.
 
 ## Lancer à la main
