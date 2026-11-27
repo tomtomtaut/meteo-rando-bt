@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timezone
 
 import numpy as np
@@ -28,33 +29,126 @@ VARS = {
 
 
 CHUNK = 100
+# Open-Meteo gratuit : 600 « appels » par minute. Un appel = un lieu, pondéré par
+# max(1, variables/10) × max(1, jours/14). Au-delà : refus 429 Too Many Requests.
+# On garde une marge et on attend que la minute se libère avant le paquet suivant.
+BUDGET_MINUTE = 540
+WINDOW_S = 61
+_sent: list[tuple[float, float]] = []   # (instant, poids) des requêtes de la dernière minute
+_sleep = time.sleep                      # remplaçable dans les tests
+_clock = time.monotonic
 
 
-def fetch(points: list[tuple[float, float]], alts: list[float]) -> dict | None:
-    """Comme _fetch, par paquets de 100 points (limite de longueur d'URL)."""
-    parts = [_fetch(points[i:i + CHUNK]) for i in range(0, len(points), CHUNK)]
-    if not parts or any(p is None for p in parts):
+MAX_REFUSALS = 3
+_refusals = [0]
+
+
+class TooMany(Exception):
+    """Refus 429 d'Open-Meteo."""
+
+
+def _weight(n_points: int, n_vars: int, n_days: int) -> float:
+    return n_points * max(1.0, n_vars / 10) * max(1.0, n_days / 14)
+
+
+def _throttle(w: float) -> None:
+    """Attend, si besoin, que le poids envoyé sur la dernière minute laisse la place à w."""
+    while True:
+        now = _clock()
+        _sent[:] = [(t, x) for t, x in _sent if now - t < WINDOW_S]
+        used = sum(x for _, x in _sent)
+        if not _sent or used + w <= BUDGET_MINUTE:
+            _sent.append((now, w))
+            return
+        wait = WINDOW_S - (now - _sent[0][0]) + 0.5
+        log.info("Open-Meteo : %.0f appels sur la dernière minute, pause de %.0f s", used, wait)
+        _sleep(max(wait, 1.0))
+
+
+def fetch(points: list[tuple[float, float]], alts: list[float], order: list[int] | None = None) -> dict | None:
+    """Comme _fetch, par paquets de 100 points (limite de longueur d'URL), au rythme permis par Open-Meteo.
+
+    order : ordre de priorité des points (les plus importants d'abord). Un paquet en échec
+    laisse ses colonnes vides (NaN) sans faire perdre les autres. None si tout échoue."""
+    order = list(order) if order is not None else list(range(len(points)))
+    chunks = [order[i:i + CHUNK] for i in range(0, len(order), CHUNK)]
+    parts = []
+    _refusals[0] = 0
+    for ch in chunks:
+        if _refusals[0] >= MAX_REFUSALS:   # Open-Meteo refuse encore après plusieurs minutes : on arrête
+            parts.append(None)
+            continue
+        part = _fetch([points[i] for i in ch])
+        if part is not None:
+            # Variables en altitude parfois absentes du modèle à 9 km : on les prend à 25 km
+            missing = [k for k in ("rh850", "rh700", "ws925") if k not in part]
+            if missing:
+                extra = _fetch([points[i] for i in ch], models=("ecmwf_ifs025",), only=missing)
+                if extra is not None:
+                    _align_into(part, extra, missing)
+        parts.append(part)
+    ok = [(ch, p) for ch, p in zip(chunks, parts) if p is not None]
+    if not ok:
         return None
-    out = {"times": parts[0]["times"], "model": parts[0]["model"]}
+    times = ok[0][1]["times"]
+    models = []
+    for _, p in ok:
+        if p["model"] not in models:
+            models.append(p["model"])
+    out = {"times": times, "model": "+".join(models)}
+    failed = sum(len(ch) for ch, p in zip(chunks, parts) if p is None)
+    if failed:
+        log.warning("Open-Meteo : %d points sur %d sans ECMWF (paquets refusés)", failed, len(points))
+    out["n_missing"] = failed
     for k in VARS:
-        if all(k in p for p in parts):
-            out[k] = np.concatenate([p[k] for p in parts], axis=1)
-    # Variables en altitude parfois absentes du modèle à 9 km : on les prend à 25 km
-    missing = [k for k in ("rh850", "rh700", "ws925") if k not in out]
-    if missing:
-        extra = [_fetch(points[i:i + CHUNK], models=("ecmwf_ifs025",), only=missing)
-                 for i in range(0, len(points), CHUNK)]
-        if all(e is not None for e in extra):
-            idx = {t: i for i, t in enumerate(extra[0]["times"])}
-            for k in missing:
-                if all(k in e for e in extra):
-                    arr = np.concatenate([e[k] for e in extra], axis=1)
-                    full = np.full((len(out["times"]), arr.shape[1]), np.nan)
-                    for i, t in enumerate(out["times"]):
-                        if t in idx:
-                            full[i] = arr[idx[t]]
-                    out[k] = full
+        if not any(k in p for _, p in ok):
+            continue
+        full = np.full((len(times), len(points)), np.nan)
+        for ch, p in ok:
+            if k not in p:
+                continue
+            if p["times"] == times:
+                full[:, ch] = p[k]
+            else:
+                idx = {t: i for i, t in enumerate(p["times"])}
+                for i, t in enumerate(times):
+                    if t in idx:
+                        full[i, ch] = p[k][idx[t]]
+        out[k] = full
     return out
+
+
+def _align_into(part: dict, extra: dict, keys: list[str]) -> None:
+    idx = {t: i for i, t in enumerate(extra["times"])}
+    for k in keys:
+        if k not in extra:
+            continue
+        full = np.full((len(part["times"]), extra[k].shape[1]), np.nan)
+        for i, t in enumerate(part["times"]):
+            if t in idx:
+                full[i] = extra[k][idx[t]]
+        part[k] = full
+
+
+PAST_DAYS, FORECAST_DAYS = 2, 7   # 7 jours : pour repérer une fenêtre Everesting assez tôt
+
+
+def _get(params: dict, n_points: int, n_vars: int) -> dict | list:
+    """Une requête, avec une seconde chance après une minute en cas de refus 429."""
+    w = _weight(n_points, n_vars, PAST_DAYS + FORECAST_DAYS)
+    for attempt in (1, 2):
+        _throttle(w)
+        r = requests.get(API, params=params, timeout=60)
+        if r.status_code == 429:
+            if attempt == 1:
+                log.warning("Open-Meteo : refus 429, nouvel essai dans %d s", WINDOW_S)
+                _sent[:] = [(_clock(), BUDGET_MINUTE)]   # la minute est pleine côté serveur
+                continue
+            _refusals[0] += 1
+            raise TooMany("429 Too Many Requests (après une minute d'attente)")
+        r.raise_for_status()
+        return r.json()
+    raise TooMany("429")
 
 
 def _fetch(points: list[tuple[float, float]], models=MODELS, only=None) -> dict | None:
@@ -65,15 +159,17 @@ def _fetch(points: list[tuple[float, float]], models=MODELS, only=None) -> dict 
         "longitude": ",".join(f"{lo:.4f}" for _, lo in points),
         "hourly": ",".join(wanted.values()),
         "timezone": "GMT",
-        "past_days": 2,
-        "forecast_days": 7,   # 7 jours : pour repérer une fenêtre Everesting assez tôt
+        "past_days": PAST_DAYS,
+        "forecast_days": FORECAST_DAYS,
         "wind_speed_unit": "kmh",
     }
     for model in models:
         try:
-            r = requests.get(API, params={**params, "models": model}, timeout=60)
-            r.raise_for_status()
-            data = r.json()
+            data = _get({**params, "models": model}, len(points), len(wanted))
+        except TooMany as e:
+            # Refus de débit : les autres modèles seraient refusés aussi, inutile d'insister
+            log.warning("Open-Meteo %s refusé : %s", model, e)
+            return None
         except (requests.RequestException, ValueError) as e:
             log.warning("Open-Meteo %s indisponible : %s", model, e)
             continue
@@ -89,7 +185,7 @@ def _fetch(points: list[tuple[float, float]], models=MODELS, only=None) -> dict 
                 continue
             out[k] = arr
         if "precip" in out or only:
-            log.info("Open-Meteo : modèle %s, %d heures", model, len(times))
+            log.info("Open-Meteo : modèle %s, %d heures, %d points", model, len(times), len(points))
             return out
     return None
 

@@ -113,9 +113,15 @@ def main():
     log.info("%d points d'activités + %d mailles de grille", n_spots, len(grid_cells))
     warnings, debug = [], {"points": [{"lat": la, "lon": lo, "alt": a} for (la, lo), a in zip(pts.coords, pts.alts)]}
 
-    ec = ecmwf.fetch(pts.coords, pts.alts)
+    # Priorité : activités, puis grille Guadeloupe, puis grille Dominique (si Open-Meteo refuse
+    # la fin des paquets, c'est le moins utile qui manque)
+    order = sorted(range(n), key=lambda i: (i >= n_spots, zone_of(pts.coords[i][0]) == "dm"))
+    ec = ecmwf.fetch(pts.coords, pts.alts, order=order)
     if ec is None:
         warnings.append("ECMWF (Open-Meteo) indisponible : les heures au-delà d'AROME ne sont pas calculées.")
+    elif ec.get("n_missing"):
+        warnings.append(f"ECMWF (Open-Meteo) partiel : {ec['n_missing']} points sur {n} sans données "
+                        "au-delà d'AROME (limite de débit).")
     ens = ecmwf.fetch_ensemble(pts.coords[:n_spots])  # ensemble sur les activités seulement (volume)
     if ens is not None:
         full = np.full(ens["precip_ens"].shape[:1] + (n,) + ens["precip_ens"].shape[2:], np.nan)
