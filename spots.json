@@ -1985,12 +1985,559 @@
      "role": "objectif"
     }
    ]
+  },
+  {
+   "id": "dm-boiling-lake",
+   "nom": "Boiling Lake par la Valley of Desolation",
+   "secteur": "Laudat (départ Titou Gorge)",
+   "type": "sommet",
+   "niveau": "Hors sentiers",
+   "duree_h": 8,
+   "acces": "Fermé périodiquement après de fortes pluies. Site pass obligatoire (parcs nationaux).",
+   "conseil": "Guide fortement conseillé. Départ vers 7h. 12,8 km A/R, 6-8 h. Valley of Desolation déroutante par mauvais temps.",
+   "points": [
+    {
+     "nom": "Morne Nicholls",
+     "lat": 15.326,
+     "lon": -61.304,
+     "alt": 960,
+     "role": "objectif"
+    },
+    {
+     "nom": "Boiling Lake",
+     "lat": 15.318,
+     "lon": -61.295,
+     "alt": 760,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-titou",
+   "nom": "Titou Gorge (nage)",
+   "secteur": "Laudat",
+   "type": "riviere",
+   "niveau": "Touristique",
+   "duree_h": 1,
+   "acces": "Site pass obligatoire (parcs nationaux).",
+   "conseil": "Nage dans une gorge étroite jusqu'à une cascade.",
+   "points": [
+    {
+     "nom": "Titou Gorge",
+     "lat": 15.332,
+     "lon": -61.313,
+     "alt": 600,
+     "role": "objectif"
+    },
+    {
+     "nom": "Amont (Freshwater Lake)",
+     "lat": 15.342,
+     "lon": -61.302,
+     "alt": 780,
+     "role": "amont"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-canyoning",
+   "nom": "Canyoning Titou Gorge → haut de Trafalgar",
+   "secteur": "Roseau Valley",
+   "type": "riviere",
+   "niveau": "Intermédiaire",
+   "duree_h": 5,
+   "acces": "",
+   "conseil": "Guide obligatoire (Extreme Dominica). Rappels dans sept cascades.",
+   "points": [
+    {
+     "nom": "Canyon",
+     "lat": 15.326,
+     "lon": -61.326,
+     "alt": 450,
+     "role": "objectif"
+    },
+    {
+     "nom": "Amont (Titou, Freshwater)",
+     "lat": 15.34,
+     "lon": -61.305,
+     "alt": 780,
+     "role": "amont"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-trafalgar",
+   "nom": "Trafalgar Falls",
+   "secteur": "Roseau Valley",
+   "type": "rando",
+   "niveau": "Touristique",
+   "duree_h": 1,
+   "acces": "Site pass obligatoire (parcs nationaux).",
+   "conseil": "Plateforme à 10-15 min de Papillote. Avant les croisiéristes.",
+   "points": [
+    {
+     "nom": "Trafalgar Falls",
+     "lat": 15.318,
+     "lon": -61.337,
+     "alt": 350,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-middleham",
+   "nom": "Middleham Falls",
+   "secteur": "Morne Trois Pitons (Laudat)",
+   "type": "rando",
+   "niveau": "Intermédiaire",
+   "duree_h": 2,
+   "acces": "Site pass obligatoire (parcs nationaux).",
+   "conseil": "Plus haute cascade de l'île, en forêt primaire. Saison sèche.",
+   "points": [
+    {
+     "nom": "Middleham Falls",
+     "lat": 15.355,
+     "lon": -61.32,
+     "alt": 600,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-freshwater-boeri",
+   "nom": "Freshwater Lake et Boeri Lake",
+   "secteur": "Laudat",
+   "type": "rando",
+   "niveau": "Intermédiaire",
+   "duree_h": 3,
+   "acces": "Site pass obligatoire (parcs nationaux).",
+   "conseil": "Lacs d'altitude, souvent dans la brume.",
+   "points": [
+    {
+     "nom": "Freshwater Lake",
+     "lat": 15.343,
+     "lon": -61.302,
+     "alt": 760,
+     "role": "objectif"
+    },
+    {
+     "nom": "Boeri Lake",
+     "lat": 15.352,
+     "lon": -61.313,
+     "alt": 845,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-diablotins",
+   "nom": "Morne Diablotins (1 447 m)",
+   "secteur": "Nord · Syndicate",
+   "type": "sommet",
+   "niveau": "Hors sentiers",
+   "duree_h": 6,
+   "acces": "Site pass obligatoire (parcs nationaux).",
+   "conseil": "Point culminant, raide et souvent boueux. Guide recommandé, départ très tôt.",
+   "points": [
+    {
+     "nom": "Sommet du Morne Diablotins",
+     "lat": 15.505,
+     "lon": -61.396,
+     "alt": 1447,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-trois-pitons",
+   "nom": "Morne Trois Pitons (1 387 m)",
+   "secteur": "Centre · Pont Cassé",
+   "type": "sommet",
+   "niveau": "Hors sentiers",
+   "duree_h": 7,
+   "acces": "Site pass obligatoire (parcs nationaux).",
+   "conseil": "Journée complète, sommet brumeux. Guide.",
+   "points": [
+    {
+     "nom": "Sommet du Morne Trois Pitons",
+     "lat": 15.37,
+     "lon": -61.333,
+     "alt": 1387,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-morne-anglais",
+   "nom": "Morne Anglais (1 123 m)",
+   "secteur": "Sud · Giraudel",
+   "type": "sommet",
+   "niveau": "Intermédiaire",
+   "duree_h": 4,
+   "acces": "",
+   "conseil": "Ascension avec vue à 360°. Position approximative.",
+   "points": [
+    {
+     "nom": "Sommet du Morne Anglais",
+     "lat": 15.272,
+     "lon": -61.307,
+     "alt": 1123,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-syndicate",
+   "nom": "Syndicate Nature Trail (perroquets)",
+   "secteur": "Nord · Syndicate",
+   "type": "rando",
+   "niveau": "Touristique",
+   "duree_h": 1,
+   "acces": "Site pass obligatoire (parcs nationaux).",
+   "conseil": "Tôt le matin pour les oiseaux.",
+   "points": [
+    {
+     "nom": "Syndicate",
+     "lat": 15.52,
+     "lon": -61.415,
+     "alt": 520,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-victoria",
+   "nom": "Victoria Falls (remontée de la White River)",
+   "secteur": "Côte est · Delices",
+   "type": "riviere",
+   "niveau": "Hors sentiers",
+   "duree_h": 4,
+   "acces": "Dangereux en cas de crue. Site pass obligatoire (parcs nationaux).",
+   "conseil": "Guide du village recommandé. Eau laiteuse.",
+   "points": [
+    {
+     "nom": "Victoria Falls",
+     "lat": 15.3,
+     "lon": -61.258,
+     "alt": 150,
+     "role": "objectif"
+    },
+    {
+     "nom": "Amont (White River, vers Boiling Lake)",
+     "lat": 15.315,
+     "lon": -61.285,
+     "alt": 600,
+     "role": "amont"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-sari-sari",
+   "nom": "Sari-Sari Falls",
+   "secteur": "Côte est · La Plaine",
+   "type": "riviere",
+   "niveau": "Hors sentiers",
+   "duree_h": 4,
+   "acces": "Dangereux en cas de crue.",
+   "conseil": "Environ 1h30 avec plusieurs traversées de rivière. Guide conseillé.",
+   "points": [
+    {
+     "nom": "Sari-Sari Falls",
+     "lat": 15.282,
+     "lon": -61.268,
+     "alt": 250,
+     "role": "objectif"
+    },
+    {
+     "nom": "Amont",
+     "lat": 15.295,
+     "lon": -61.29,
+     "alt": 650,
+     "role": "amont"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-emerald-jacko",
+   "nom": "Emerald Pool, Spanny Falls et Jacko Steps",
+   "secteur": "Centre",
+   "type": "riviere",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "Site pass obligatoire (parcs nationaux).",
+   "conseil": "Emerald Pool avant 10h (croisiéristes). Jacko Steps : marches des Marrons puis rivière Layou jusqu'à une cascade.",
+   "points": [
+    {
+     "nom": "Emerald Pool",
+     "lat": 15.397,
+     "lon": -61.32,
+     "alt": 450,
+     "role": "objectif"
+    },
+    {
+     "nom": "Amont",
+     "lat": 15.39,
+     "lon": -61.335,
+     "alt": 750,
+     "role": "amont"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-layou",
+   "nom": "Descente en bouée de la rivière Layou",
+   "secteur": "Centre-ouest",
+   "type": "riviere",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Prestataire ; saison sèche.",
+   "points": [
+    {
+     "nom": "Rivière Layou",
+     "lat": 15.393,
+     "lon": -61.4,
+     "alt": 60,
+     "role": "objectif"
+    },
+    {
+     "nom": "Amont",
+     "lat": 15.4,
+     "lon": -61.35,
+     "alt": 400,
+     "role": "amont"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-waitukubuli-1",
+   "nom": "Waitukubuli · segment 1 : Scotts Head → Soufrière",
+   "secteur": "Sud",
+   "type": "rando",
+   "niveau": "Intermédiaire",
+   "duree_h": 4,
+   "acces": "Site pass obligatoire (parcs nationaux).",
+   "conseil": "Le segment conseillé pour commencer. Quelques passages à la corde.",
+   "points": [
+    {
+     "nom": "Scotts Head",
+     "lat": 15.212,
+     "lon": -61.371,
+     "alt": 40,
+     "role": "objectif"
+    },
+    {
+     "nom": "Crêtes du sud",
+     "lat": 15.222,
+     "lon": -61.355,
+     "alt": 300,
+     "role": "objectif"
+    },
+    {
+     "nom": "Soufrière",
+     "lat": 15.234,
+     "lon": -61.357,
+     "alt": 30,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm",
+   "expose": true
+  },
+  {
+   "id": "dm-waitukubuli",
+   "nom": "Waitukubuli National Trail — traversée (étape du jour)",
+   "secteur": "Scotts Head → Cabrits",
+   "type": "itinerance",
+   "niveau": "Hors sentiers",
+   "duree_h": 8,
+   "acces": "Pass Waitukubuli (voir site officiel).",
+   "conseil": "184 km en 14 segments, 12-14 jours. Pas d'hébergement sur les segments 8 et 9.",
+   "points": [
+    {
+     "nom": "Sud (Bellevue Chopin)",
+     "lat": 15.27,
+     "lon": -61.32,
+     "alt": 500,
+     "role": "objectif"
+    },
+    {
+     "nom": "Centre (Laudat, Pont Cassé)",
+     "lat": 15.36,
+     "lon": -61.33,
+     "alt": 800,
+     "role": "objectif"
+    },
+    {
+     "nom": "Est (Castle Bruce)",
+     "lat": 15.43,
+     "lon": -61.28,
+     "alt": 300,
+     "role": "objectif"
+    },
+    {
+     "nom": "Nord (Syndicate)",
+     "lat": 15.515,
+     "lon": -61.41,
+     "alt": 600,
+     "role": "objectif"
+    },
+    {
+     "nom": "Cabrits",
+     "lat": 15.585,
+     "lon": -61.475,
+     "alt": 50,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-cabrits",
+   "nom": "Cabrits National Park (Fort Shirley)",
+   "secteur": "Nord · Portsmouth",
+   "type": "littoral",
+   "niveau": "Touristique",
+   "duree_h": 2,
+   "acces": "Site pass obligatoire (parcs nationaux).",
+   "conseil": "Arrivée du Waitukubuli (segment 14).",
+   "points": [
+    {
+     "nom": "Cabrits",
+     "lat": 15.586,
+     "lon": -61.477,
+     "alt": 60,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-indian-river",
+   "nom": "Indian River en barque",
+   "secteur": "Nord · Portsmouth",
+   "type": "rando",
+   "niveau": "Touristique",
+   "duree_h": 2,
+   "acces": "",
+   "conseil": "Barquier ; le matin.",
+   "points": [
+    {
+     "nom": "Indian River",
+     "lat": 15.577,
+     "lon": -61.458,
+     "alt": 5,
+     "role": "objectif"
+    }
+   ],
+   "ile": "Dominique",
+   "zone": "dm"
+  },
+  {
+   "id": "dm-champagne",
+   "nom": "Snorkeling à Champagne Reef et Scotts Head",
+   "ile": "Mer",
+   "zone": "dm",
+   "secteur": "Sud-ouest",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Bulles volcaniques qui montent du fond ; réserve marine de Soufrière-Scotts Head. Mer calme.",
+   "points": [
+    {
+     "nom": "Sud-ouest",
+     "lat": 15.245,
+     "lon": -61.376,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "dm-plongee",
+   "nom": "Plongée côte ouest (Roseau, Castle Comfort)",
+   "ile": "Mer",
+   "zone": "dm",
+   "secteur": "Côte ouest",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Intermédiaire",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Clubs certifiés (Dive Dominica, Fort Young).",
+   "points": [
+    {
+     "nom": "Côte ouest",
+     "lat": 15.285,
+     "lon": -61.392,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
+  },
+  {
+   "id": "dm-cachalots",
+   "nom": "Observation des cachalots",
+   "ile": "Mer",
+   "zone": "dm",
+   "secteur": "Côte ouest (réserve)",
+   "type": "mer",
+   "mer": "calme",
+   "niveau": "Touristique",
+   "duree_h": 3,
+   "acces": "",
+   "conseil": "Cachalots résidents toute l'année sous le vent. Site pass requis pour l'observation en bateau.",
+   "points": [
+    {
+     "nom": "Côte ouest (réserve)",
+     "lat": 15.33,
+     "lon": -61.45,
+     "alt": 0,
+     "role": "objectif"
+    }
+   ]
   }
  ],
  "exclus": [
   {
    "nom": "Chutes Moreau",
    "raison": "Interdit (arrêté municipal 2019/182/PM)."
+  },
+  {
+   "nom": "Nage avec les cachalots (Dominique)",
+   "raison": "permis ~6 000 US$ par réservation : hors budget."
   }
  ],
  "sommets": [
@@ -2065,6 +2612,27 @@
    "lat": 16.215,
    "lon": -61.73,
    "alt": 720
+  },
+  {
+   "nom": "Morne Diablotins",
+   "lat": 15.505,
+   "lon": -61.396,
+   "alt": 1447,
+   "zone": "dm"
+  },
+  {
+   "nom": "Morne Trois Pitons",
+   "lat": 15.37,
+   "lon": -61.333,
+   "alt": 1387,
+   "zone": "dm"
+  },
+  {
+   "nom": "Morne Anglais",
+   "lat": 15.272,
+   "lon": -61.307,
+   "alt": 1123,
+   "zone": "dm"
   }
  ],
  "horizons": {
@@ -2097,6 +2665,30 @@
    "nom": "Au nord de la Grande-Terre",
    "lat": 16.55,
    "lon": -61.45,
+   "alt": 0
+  },
+  "est_dm": {
+   "nom": "Atlantique à l'est de la Dominique",
+   "lat": 15.4,
+   "lon": -61.12,
+   "alt": 0
+  },
+  "ouest_dm": {
+   "nom": "Mer des Caraïbes à l'ouest de Roseau",
+   "lat": 15.35,
+   "lon": -61.55,
+   "alt": 0
+  },
+  "au_vent_dm": {
+   "nom": "Côte au vent de la Dominique (Castle Bruce)",
+   "lat": 15.43,
+   "lon": -61.27,
+   "alt": 50
+  },
+  "mer_est_dm": {
+   "nom": "Atlantique au large de la Dominique",
+   "lat": 15.45,
+   "lon": -61.05,
    "alt": 0
   }
  },

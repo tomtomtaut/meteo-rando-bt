@@ -41,16 +41,18 @@ def cat_of(spot: dict) -> str:
 
 
 def pepites_list(report: dict) -> list[dict]:
-    """Pépites en données (pour la carte) : [{jour, texte, fiable}]."""
+    """Pépites en données : [{jour, zone, texte, fiable, confiance, details}], une par zone et par lever / coucher."""
     out = []
     for d in report["days"]:
         day = d["title"].split(" · ")[1]
-        for kind, key in (("Lever", "lever"), ("Coucher", "coucher")):
-            names = [x for x in d.get("sommets", []) if x[key]["top"]]
-            if names:
-                out.append({"jour": day, "texte": sun_text(kind.lower(), names, key),
-                            "fiable": any(x[key].get("src") == "AROME" for x in names),
-                            "confiance": ((d.get("avis") or {}).get("confiance") or {}).get("niveau"),
-                            "details": [{"nom": x["nom"], "alt": x["alt"], **(x[key].get("fenetre") or {})}
-                                        for x in names]})
+        for zone in ("gp", "dm"):
+            avis_z = ((d.get("zones") or {}).get(zone) or {}).get("avis") or {}
+            for kind, key in (("Lever", "lever"), ("Coucher", "coucher")):
+                names = [x for x in d.get("sommets", []) if x[key]["top"] and x.get("zone", "gp") == zone]
+                if names:
+                    out.append({"jour": day, "zone": zone, "texte": sun_text(kind.lower(), names, key),
+                                "fiable": any(x[key].get("src") == "AROME" for x in names),
+                                "confiance": (avis_z.get("confiance") or {}).get("niveau"),
+                                "details": [{"nom": x["nom"], "alt": x["alt"], **(x[key].get("fenetre") or {})}
+                                            for x in names]})
     return out

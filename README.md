@@ -1,4 +1,4 @@
-# Où sortir en Guadeloupe
+# Où sortir — Guadeloupe et Dominique
 
 Deux fois par jour (vers 5h30 et 18h, heure de Guadeloupe), ce dépôt publie une carte et une liste qui disent quelles
 activités de la Guadeloupe et de ses îles (randos, sommets, rivières, mer calme, surf, kite/wing) sont les plus

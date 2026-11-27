@@ -64,12 +64,12 @@ DUST_HAZE = 50   # µg/m³ de poussières désertiques près du sol : brume de s
 
 
 def day_situation(d: date, profiles: dict, i_up: int | None, merged, i_up_ec: int | None,
-                  summit_alt: float = 1467, dust: dict | None = None) -> dict:
+                  summit_alt: float = 1467, dust: dict | None = None, summit_name: str = "la Soufrière") -> dict:
     """Synthèse de 6h à 16h. AROME si les profils couvrent la journée, sinon ECMWF (vent, humidité)."""
     hours = [datetime(d.year, d.month, d.day, h, tzinfo=TZ).astimezone(timezone.utc) for h in range(6, 17)]
     rows = [analyse_hour(profiles[t], i_up) for t in hours if t in profiles and i_up is not None]
     src = "AROME"
-    if len(rows) < 4:
+    if len(rows) < 4 or all(math.isnan(r["wind"]) for r in rows):   # pas de profil AROME exploitable ici
         src = "ECMWF"
         rows = []
         for t in hours:
@@ -115,13 +115,13 @@ def day_situation(d: date, profiles: dict, i_up: int | None, merged, i_up_ec: in
         b = f"base ~{r100(base)} m (niveau de condensation de l'air en mer), " if not math.isnan(base) else ""
         if top < summit_alt - 100:
             txt.append(f"Couche nuageuse d'alizé : {b}haut {htxt}. Les reliefs au vent entre ces deux "
-                       f"altitudes sont dans le nuage ; la Soufrière ({summit_alt:.0f} m) dépasse la couche : "
+                       f"altitudes sont dans le nuage ; {summit_name} ({summit_alt:.0f} m) dépasse la couche : "
                        "au-dessus des nuages possible.")
         elif top <= summit_alt + 100:
-            txt.append(f"Couche nuageuse d'alizé : {b}haut {htxt}, à hauteur de la Soufrière "
+            txt.append(f"Couche nuageuse d'alizé : {b}haut {htxt}, à hauteur de {summit_name} "
                        f"({summit_alt:.0f} m) : sommet à la limite, entre nuage et éclaircies.")
         else:
-            txt.append(f"Couche nuageuse d'alizé : {b}haut {htxt}, en moyenne au-dessus de la Soufrière "
+            txt.append(f"Couche nuageuse d'alizé : {b}haut {htxt}, en moyenne au-dessus de {summit_name} "
                        f"({summit_alt:.0f} m) : les sommets au vent sont surtout dans le nuage (détail heure par "
                        "heure sur les barres des sommets).")
     elif not math.isnan(inv):

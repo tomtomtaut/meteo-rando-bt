@@ -1,4 +1,4 @@
-"""Quadrillage de la Basse-Terre sur les mailles AROME (2,5 km) et scores par activité, heure par heure.
+"""Quadrillage de la Guadeloupe et de la Dominique sur les mailles AROME (2,5 km) et scores par activité, heure par heure.
 
 Chaque case correspond exactement à une maille du modèle : on n'invente pas de détail entre deux mailles.
 """
@@ -39,13 +39,20 @@ DESIRADE = [(16.300, -61.100), (16.335, -61.020), (16.330, -60.995), (16.290, -6
 TERRE_DE_HAUT = [(15.880, -61.600), (15.880, -61.570), (15.855, -61.570), (15.855, -61.600)]
 TERRE_DE_BAS = [(15.870, -61.650), (15.870, -61.620), (15.840, -61.620), (15.840, -61.650)]
 PETITE_TERRE = [(16.180, -61.130), (16.180, -61.100), (16.165, -61.100), (16.165, -61.130)]
+DOMINIQUE = [
+    (15.635, -61.465), (15.632, -61.400), (15.612, -61.360), (15.590, -61.320), (15.555, -61.290),
+    (15.510, -61.255), (15.450, -61.250), (15.390, -61.240), (15.330, -61.240), (15.270, -61.250),
+    (15.230, -61.280), (15.205, -61.330), (15.200, -61.375), (15.240, -61.382), (15.290, -61.392),
+    (15.350, -61.402), (15.400, -61.428), (15.460, -61.442), (15.520, -61.466), (15.580, -61.478),
+]
 ILES = {
     "Basse-Terre": BASSE_TERRE, "Grande-Terre": GRANDE_TERRE, "Marie-Galante": MARIE_GALANTE,
     "La Désirade": DESIRADE, "Les Saintes": TERRE_DE_HAUT, "Les Saintes (Terre-de-Bas)": TERRE_DE_BAS,
-    "Petite-Terre": PETITE_TERRE,
+    "Petite-Terre": PETITE_TERRE, "Dominique": DOMINIQUE,
 }
 SEA_STEP = 0.05               # cases en mer : 5,5 km, à l'échelle du modèle de vagues
-SEA_BBOX = (15.75, 16.60, -61.95, -60.90)
+SEA_BBOXES = [(15.75, 16.60, -61.95, -60.90),   # Guadeloupe et ses îles
+              (15.10, 15.75, -61.65, -61.10)]   # Dominique
 SEA_MAX_DIST = 0.12           # ° : mer jusqu'à ~13 km des côtes
 
 
@@ -88,18 +95,20 @@ def cells() -> list[dict]:
     land = []
     for ile, poly in ILES.items():
         land += _land_cells(poly, ile.split(" (")[0])
-    sea = []
-    lat = SEA_BBOX[0]
-    while lat <= SEA_BBOX[1] + 1e-9:
-        lon = SEA_BBOX[2]
-        while lon <= SEA_BBOX[3] + 1e-9:
-            la, lo = round(lat, 3), round(lon, 3)
-            if not on_land(la, lo):
-                d = min(math.hypot(la - c["lat"], lo - c["lon"]) for c in land)
-                if d <= SEA_MAX_DIST:
-                    sea.append({"lat": la, "lon": lo, "kind": "mer", "ile": None, "size": SEA_STEP})
-            lon += SEA_STEP
-        lat += SEA_STEP
+    sea, seen = [], set()
+    for bb in SEA_BBOXES:
+        lat = bb[0]
+        while lat <= bb[1] + 1e-9:
+            lon = bb[2]
+            while lon <= bb[3] + 1e-9:
+                la, lo = round(lat, 3), round(lon, 3)
+                if (la, lo) not in seen and not on_land(la, lo):
+                    seen.add((la, lo))
+                    d = min(math.hypot(la - c["lat"], lo - c["lon"]) for c in land)
+                    if d <= SEA_MAX_DIST:
+                        sea.append({"lat": la, "lon": lo, "kind": "mer", "ile": None, "size": SEA_STEP})
+                lon += SEA_STEP
+            lat += SEA_STEP
     return land + sea
 
 

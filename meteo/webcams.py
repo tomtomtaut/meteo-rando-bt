@@ -1,4 +1,4 @@
-"""Webcams de la Guadeloupe et de ses îles.
+"""Webcams de la Guadeloupe, de ses îles et de la Dominique.
 
 Avec une clé gratuite de l'API Windy Webcams (secret GitHub WINDY_WEBCAMS_KEY), on liste
 automatiquement toutes les webcams de la zone. Sans clé, on garde celles de spots.json.
@@ -14,9 +14,9 @@ import requests
 log = logging.getLogger(__name__)
 
 API = "https://api.windy.com/webcams/api/v3/webcams"
-CENTER = (16.15, -61.40)      # milieu de l'archipel
-RADIUS_KM = 70
-BBOX = (15.75, 16.60, -61.90, -60.90)  # toute la Guadeloupe et ses îles
+SEARCHES = [((16.15, -61.40), 70),   # Guadeloupe et ses îles
+            ((15.42, -61.35), 40)]   # Dominique
+BBOX = (15.15, 16.60, -61.90, -60.90)  # Guadeloupe, ses îles et la Dominique
 
 
 def player(wid: str) -> str:
@@ -30,15 +30,15 @@ def fetch(configured: list[dict]) -> list[dict]:
     key = os.environ.get("WINDY_WEBCAMS_KEY")
     if not key:
         return cams
-    try:
-        r = requests.get(API, headers={"x-windy-api-key": key}, timeout=30, params={
-            "nearby": f"{CENTER[0]},{CENTER[1]},{RADIUS_KM}", "limit": 50,
-            "include": "location,player,urls"})
-        r.raise_for_status()
-        found = r.json().get("webcams", [])
-    except (requests.RequestException, ValueError) as e:
-        log.warning("API Windy Webcams indisponible : %s", e)
-        return cams
+    found = []
+    for (la, lo), rad in SEARCHES:
+        try:
+            r = requests.get(API, headers={"x-windy-api-key": key}, timeout=30, params={
+                "nearby": f"{la},{lo},{rad}", "limit": 50, "include": "location,player,urls"})
+            r.raise_for_status()
+            found += r.json().get("webcams", [])
+        except (requests.RequestException, ValueError) as e:
+            log.warning("API Windy Webcams indisponible : %s", e)
     known = {c["id"] for c in cams}
     for w in found:
         wid = str(w.get("webcamId") or w.get("id"))

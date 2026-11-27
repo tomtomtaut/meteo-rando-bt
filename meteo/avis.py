@@ -21,7 +21,6 @@ from .sommets import sun_text
 
 CLASSES = [(1, "sec"), (5, "quelques averses"), (15, "pluvieux"), (math.inf, "très pluvieux")]  # mm sur 6h-18h
 ENS_WET = 5          # mm sur la journée : seuil « journée mouillée » pour compter les scénarios
-SOUFRIERE = 1467
 
 
 def _f1(x):
@@ -56,7 +55,7 @@ def _agree(a: float, b: float) -> tuple[str, int]:
     return ("d'accord" if gap == 0 else "proches" if gap == 1 else "en désaccord"), gap
 
 
-def confidence(d: date, h0: int, cols: list[int], ar, ar_lag, ec, ens) -> dict:
+def confidence(d: date, h0: int, cols: list[int], ar, ar_lag, ec, ens, relief: str = "Basse-Terre") -> dict:
     labels = _labels(d, h0, 18)
     lignes, niveau = [], 2   # 2 élevée, 1 moyenne, 0 faible
     a = _total(ar, "precip", labels, cols)
@@ -64,7 +63,7 @@ def confidence(d: date, h0: int, cols: list[int], ar, ar_lag, ec, ens) -> dict:
     if a is not None and e is not None:
         verdict, gap = _agree(a, e)
         niveau = min(niveau, 2 - gap)
-        lignes.append({"t": f"AROME {_f1(a)} mm · ECMWF {_f1(e)} mm (moyenne des activités de Basse-Terre, "
+        lignes.append({"t": f"AROME {_f1(a)} mm · ECMWF {_f1(e)} mm (moyenne des activités de {relief}, "
                             f"{h0}h-18h) → modèles {verdict}", "aide": "confiance"})
     p = _total(ar_lag, "precip", labels, cols)
     if a is not None and p is not None:
@@ -125,9 +124,12 @@ def _mean_at(m: scoring.Merged, key: str, i: int | None, d: date, h0=8, h1=16) -
 
 
 def day_avis(d: date, now: datetime, m: scoring.Merged, spots: list[dict], top, sit: dict, sommets_day: list,
-             raw: dict, idx_h: dict) -> dict:
+             raw: dict, idx_h: dict, relief: str = "Basse-Terre", mer_key: str = "mer_est",
+             ref: tuple[str, int] = ("la Soufrière", 1467)) -> dict:
+    """relief : île dont on lit la pluie ; mer_key : point au large ; ref : sommet de référence (nom, altitude)."""
     h0 = 6   # journée entière, même les heures passées (demande de Tomas : voir les données quand même)
-    bt = [s for s in spots if s.get("ile") == "Basse-Terre" and s["type"] != "mer"]
+    bt = [s for s in spots if s.get("ile") == relief and s["type"] != "mer"]
+    ref_nom, ref_alt = ref
     cols = sorted({i for s in bt for i in s["_obj"]})
     ch = []
 
@@ -152,12 +154,12 @@ def day_avis(d: date, now: datetime, m: scoring.Merged, spots: list[dict], top, 
             val = (f"base ~{r100(base)} m · " if ok(base) else "") + f"haut {haut}"
             if not ok(top_):
                 lect = "sans le haut de la couche, l’état des sommets reste une tendance"
-            elif top_ < SOUFRIERE - 100:
-                lect = f"la Soufrière ({SOUFRIERE} m) dépasse la couche : au-dessus des nuages possible"
-            elif top_ <= SOUFRIERE + 100:
-                lect = f"haut de la couche à hauteur de la Soufrière : sommet à la limite"
+            elif top_ < ref_alt - 100:
+                lect = f"{ref_nom} ({ref_alt} m) dépasse la couche : au-dessus des nuages possible"
+            elif top_ <= ref_alt + 100:
+                lect = f"haut de la couche à hauteur de {ref_nom} : sommet à la limite"
             else:
-                lect = f"couche plus haute que la Soufrière : sommets au vent surtout dans le nuage"
+                lect = f"couche plus haute que {ref_nom} : sommets au vent surtout dans le nuage"
         ch.append({"label": "Couche nuageuse d'alizé", "valeur": val, "lecture": lect, "aide": "couche"})
 
     if h0 < 18 and bt:
@@ -167,7 +169,7 @@ def day_avis(d: date, now: datetime, m: scoring.Merged, spots: list[dict], top, 
             med = float(np.median(vals))
             wettest = max(tots)
             hmax = max(h for _, h, _ in tots)
-            ch.append({"label": f"Pluie sur les activités de Basse-Terre ({h0}h-18h)",
+            ch.append({"label": f"Pluie sur les activités de {'la ' if relief == 'Dominique' else ''}{relief} ({h0}h-18h)",
                        "valeur": f"médiane {_f1(med)} mm · max {_f1(wettest[0])} mm ({wettest[2]})",
                        "lecture": f"intensité la plus forte {_f1(hmax)} mm/h → {lecture.pluie_h(hmax)} (AMS)",
                        "aide": "pluie"})
@@ -180,7 +182,7 @@ def day_avis(d: date, now: datetime, m: scoring.Merged, spots: list[dict], top, 
                        "lecture": f"{lecture.cape(cmax)} (SPC) : orages possibles si des averses se forment",
                        "aide": "cape"})
 
-    i_e = idx_h.get("mer_est")
+    i_e = idx_h.get(mer_key)
     hs, per, dr = (_mean_at(m, k, i_e, d) for k in ("hs", "per", "dir"))
     if ok(hs):
         f, l = lecture.douglas(hs)
@@ -210,4 +212,4 @@ def day_avis(d: date, now: datetime, m: scoring.Merged, spots: list[dict], top, 
     lect = [t for t in sit.get("texte", []) if not t.startswith(("Mer au large", "Brume de sable"))]
     return {"chiffres": ch, "lecture": lect, "source": sit.get("source"),
             "retenir": retenir, "soleil": soleil,
-            "confiance": confidence(d, h0, cols, raw.get("ar"), raw.get("ar_lag"), raw.get("ec"), raw.get("ens"))}
+            "confiance": confidence(d, h0, cols, raw.get("ar"), raw.get("ar_lag"), raw.get("ec"), raw.get("ens"), relief)}

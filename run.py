@@ -48,6 +48,20 @@ class Points:
         return self._idx[key]
 
 
+# Deux zones : la Guadeloupe (et ses îles) et la Dominique, chacune avec ses points en mer
+ZONES = {
+    "gp": {"nom": "Guadeloupe", "est": "est", "ouest": "ouest", "au_vent": "au_vent", "mer_est": "mer_est",
+           "relief": "Basse-Terre", "ref": ("la Soufrière", 1467)},
+    "dm": {"nom": "Dominique", "est": "est_dm", "ouest": "ouest_dm", "au_vent": "au_vent_dm", "mer_est": "mer_est_dm",
+           "relief": "Dominique", "ref": ("le Morne Diablotins", 1447)},
+}
+DM_LAT = 15.75   # au sud de cette latitude : Dominique
+
+
+def zone_of(lat: float) -> str:
+    return "dm" if lat < DM_LAT else "gp"
+
+
 def load_config():
     cfg = json.loads((ROOT / "spots.json").read_text(encoding="utf-8"))
     pts = Points()
@@ -170,7 +184,7 @@ def main():
     # Mer : vagues aux points en mer (activités, cases, références au large)
     sea_idx = sorted({i for s in cfg["spots"] if s["type"] == "mer" for i in s["_obj"]}
                      | {i for c, i in zip(grid_cells, grid_idx) if c["kind"] == "mer"}
-                     | {idx_h[k] for k in ("mer_est", "mer_nord") if k in idx_h})
+                     | {idx_h[k] for k in ("mer_est", "mer_nord", "mer_est_dm") if k in idx_h})
     sea = marine.fetch([pts.coords[i] for i in sea_idx]) if sea_idx else None
     if sea:
         full = {"times": sea["times"]}
@@ -189,7 +203,11 @@ def main():
     pts_alt = high_points(cfg, pts)
     for i, a in zip(grid_idx, grid_alts):
         pts_alt.setdefault(i, (0 if np.isnan(a) else a) + 20)
-    merged.summit_state = sommets.compute_states(pts_alt, profiles, merged, idx_h.get("au_vent"), idx_h.get("est"))
+    # couche nuageuse lue en amont de chaque île : à l'est de la Guadeloupe, à l'est de la Dominique
+    merged.summit_state = {}
+    for z, Z in ZONES.items():
+        sub = {i: a for i, a in pts_alt.items() if zone_of(pts.coords[i][0]) == z}
+        merged.summit_state.update(sommets.compute_states(sub, profiles, merged, idx_h.get(Z["au_vent"]), idx_h.get(Z["est"])))
 
     local = now.astimezone(scoring.TZ)
     today = local.date()
@@ -208,17 +226,27 @@ def main():
                     r_["passe"] = True
         for s_, r_ in all_:
             r_["lecture"] = lecture.lines(s_, r_)
+        zones = {}
+        for z, Z in ZONES.items():
+            zones[z] = {
+                "top": scoring.top3([(s_, r_) for s_, r_ in all_ if s_.get("zone", "gp") == z]),
+                "situation": situation.day_situation(d, profiles, idx_h.get(Z["est"]), merged, idx_h.get(Z["est"]),
+                                                     summit_alt=Z["ref"][1], dust=dust, summit_name=Z["ref"][0]),
+            }
+        som_days = []
+        for s_ in cfg.get("sommets", []):
+            Z = ZONES[s_.get("zone", "gp")]
+            x = sommets.day_summary(s_, s_["_i"], merged.summit_state, merged, d, idx_h.get(Z["est"]), idx_h.get(Z["ouest"]))
+            x["zone"] = s_.get("zone", "gp")
+            som_days.append(x)
         days.append({
             "date": d.isoformat(),
             "title": f"{names[k]} · {render.fdate(d)}",
             "short": render.fdate(d).split(" ")[0][:3] + f". {d.day}",
             "all": all_,
-            "top": scoring.top3(all_),
+            "zones": zones,
             "couverture": render.coverage(merged, d),
-            "situation": situation.day_situation(d, profiles, idx_h.get("est"), merged, idx_h.get("est"),
-                                                 dust=dust),
-            "sommets": [sommets.day_summary(s, s["_i"], merged.summit_state, merged, d,
-                                            idx_h.get("est"), idx_h.get("ouest")) for s in cfg.get("sommets", [])],
+            "sommets": som_days,
         })
     nb_today = now if first == 0 else None
     grid_data = grid.compute(merged, grid_idx, grid_alts, [date.fromisoformat(d["date"]) for d in days], nb_today,
@@ -247,10 +275,15 @@ def main():
         warnings.append(f"{len(controles)} incohérence(s) d'heures détectée(s) : voir debug.json.")
     for d in days:
         dd = date.fromisoformat(d["date"])
-        d["situation"]["texte"] = d["situation"].get("texte", []) + situation.islands_and_sea(
-            dd, merged, d["situation"].get("wind", float("nan")), idx_h.get("mer_est"), idx_h.get("mer_nord"))
-        d["avis"] = avis.day_avis(dd, now, merged, cfg["spots"], d["top"], d["situation"], d["sommets"],
-                                  {"ar": ar, "ar_lag": ar_lag, "ec": ec, "ens": ens}, idx_h)
+        gp = d["zones"]["gp"]
+        gp["situation"]["texte"] = gp["situation"].get("texte", []) + situation.islands_and_sea(
+            dd, merged, gp["situation"].get("wind", float("nan")), idx_h.get("mer_est"), idx_h.get("mer_nord"))
+        for z, Z in ZONES.items():
+            zz = d["zones"][z]
+            zz["avis"] = avis.day_avis(dd, now, merged, cfg["spots"], zz["top"], zz["situation"],
+                                       [x for x in d["sommets"] if x["zone"] == z],
+                                       {"ar": ar, "ar_lag": ar_lag, "ec": ec, "ens": ens}, idx_h,
+                                       relief=Z["relief"], mer_key=Z["mer_est"], ref=Z["ref"])
     ever = everesting.compute(merged, now, *cfg["_ever"], ens) if cfg.get("_ever") else None
     report = {
         "generated": f"{render.fdate(local.date())} à {local.hour}h{local:%M}",
@@ -277,7 +310,8 @@ def main():
         return {"id": spot["id"], "nom": spot["nom"], "cat": cat, "type": spot["type"], "ile": spot.get("ile", ""),
                 "lat": p["lat"],
                 "lon": p["lon"], "secteur": spot["secteur"], "niveau": spot["niveau"],
-                "acces": spot.get("acces", ""), "conseil": spot.get("conseil", ""), "houle": spot.get("houle")}
+                "acces": spot.get("acces", ""), "conseil": spot.get("conseil", ""), "houle": spot.get("houle"),
+                "zone": spot.get("zone", "gp")}
 
     compact = {
         "generated_utc": now.isoformat(), "generated": report["generated"], "sources": sources, "warnings": warnings,
@@ -287,14 +321,15 @@ def main():
         "everesting": ever,
         "etats": {(k or "none"): list(v) for k, v in sommets.STATES.items()},
         "pen_labels": scoring.PEN_LABELS,
+        "zones": {z: {"nom": Z["nom"], "ref": Z["ref"][0]} for z, Z in ZONES.items()},
         "days": [{
             "date": d["date"], "title": d["title"], "couverture": d["couverture"],
-            "top": [s["id"] for s, _ in d["top"]],
+            "zones": {z: {"top": [s_["id"] for s_, _ in zz["top"]], "situation": zz["situation"], "avis": zz["avis"]}
+                      for z, zz in d["zones"].items()},
             "scores": {s["id"]: {k: r.get(k) for k in ("score", "label", "start", "end", "source", "reasons", "passe",
                                                          "detail", "mesures", "lecture")}
                        for s, r in d["all"]},
-            "situation": d["situation"], "avis": d["avis"],
-            "sommets": {x["nom"]: {"alt": x["alt"], "etats": {h["h"]: h["state"] for h in x["hours"]},
+            "sommets": {x["nom"]: {"alt": x["alt"], "zone": x["zone"], "etats": {h["h"]: h["state"] for h in x["hours"]},
                                    "details": {h["h"]: h["det"] for h in x["hours"]},
                                    "pourquoi": {h["h"]: h.get("why") for h in x["hours"]},
                                    "lever": x["lever"], "coucher": x["coucher"], "texte": x["texte"]}
@@ -308,7 +343,8 @@ def main():
         h.mkdir(parents=True, exist_ok=True)
         (h / f"{local:%Y-%m-%d_%Hh}.json").write_text(json.dumps(clean(compact), ensure_ascii=False, default=str), encoding="utf-8")
     for d in days:
-        log.info("%s : %s", d["title"], ", ".join(f"{s['nom']} ({r['score']})" for s, r in d["top"]) or "rien")
+        for z in ZONES:
+            log.info("%s [%s] : %s", d["title"], z, ", ".join(f"{s['nom']} ({r['score']})" for s, r in d["zones"][z]["top"]) or "rien")
         sf = d["sommets"][0] if d["sommets"] else None
         if sf:
             log.info("  %s : lever %s, %s", sf["nom"], sf["lever"]["etat"], sf["texte"])

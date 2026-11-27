@@ -23,7 +23,7 @@ def page(data_base: str = DATA_BASE) -> str:
 
 
 MANIFEST = """{
-  "name": "Où sortir en Guadeloupe",
+  "name": "Où sortir · Guadeloupe et Dominique",
   "short_name": "Sortir GP",
   "start_url": "./index.html#point",
   "scope": "./",
@@ -67,7 +67,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<title>Où sortir en Guadeloupe</title>
+<title>Où sortir · Guadeloupe et Dominique</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root { --bg:#f6f5f1; --fg:#1d1d1b; --muted:#6b6b66; --card:#fff; --line:rgba(128,128,128,.22); --acc:#1f6f4a;
@@ -83,6 +83,11 @@ header.top { position:sticky; top:0; z-index:500; background:var(--bg); padding:
   border-bottom:1px solid var(--line); }
 .hrow { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
 .hrow b { font-size:1.05rem; }
+.zsel { display:flex; gap:2px; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:2px; margin-right:auto; }
+.zsel button { border:0; background:none; border-radius:999px; padding:3px 10px; font-size:.78rem; cursor:pointer; }
+.zsel button.on { background:var(--acc); color:#fff; }
+.hrow { align-items:center; flex-wrap:wrap; row-gap:4px; }
+@media (max-width: 999px) { #age { width:100%; order:3; } }
 #age { font-size:.75rem; } #age.old { color:#b06000; font-weight:600; }
 .seg { display:flex; gap:4px; margin-top:8px; background:var(--card); border-radius:12px; padding:3px; border:1px solid var(--line); }
 .seg button { flex:1; border:0; background:none; padding:6px 2px; border-radius:9px; font-size:.82rem; line-height:1.15; cursor:pointer; }
@@ -188,7 +193,7 @@ iframe.cam { width:100%; height:210px; border:0; border-radius:10px; margin-top:
 </style></head>
 <body>
 <header class="top" id="top">
-  <div class="hrow"><b>Où sortir en Guadeloupe</b><span id="age" class="muted"></span></div>
+  <div class="hrow"><b>Où sortir</b><span class="zsel" id="zones"></span><span id="age" class="muted"></span></div>
   <div class="seg" id="days"></div>
 </header>
 <main id="view"><p class="muted">Chargement…</p></main>
@@ -218,9 +223,12 @@ const LEG = {rando: "pluie, rafales, chaleur, orages", riviere: "pluie des 24 h 
 const SRC = {"AROME": "AROME 2,5 km", "ECMWF-ens": "ECMWF (tendance)", "ECMWF": "ECMWF (tendance)", "mixte": "AROME + ECMWF"};
 const DIRS = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
 let D = null, G = null, map = null, rects = [], markers = [], SP = {};
-const S = Object.assign({day: 0, cat: "all", ile: "all", cmp: false, h: null, avoid: false}, (() => {
+const ZC = {gp: [16.15, -61.42, 10], dm: [15.42, -61.35, 10]};
+const S = Object.assign({day: 0, cat: "all", ile: "all", cmp: false, h: null, zone: "gp"}, (() => {
   try { return JSON.parse(localStorage.getItem("sortir") || "{}"); } catch (e) { return {}; } })());
-const save = () => { try { localStorage.setItem("sortir", JSON.stringify({cat: S.cat, ile: S.ile, cmp: S.cmp})); } catch (e) {} };
+const save = () => { try { localStorage.setItem("sortir", JSON.stringify({cat: S.cat, ile: S.ile, cmp: S.cmp, zone: S.zone})); } catch (e) {} };
+const zoneOf = lat => lat < 15.75 ? "dm" : "gp";
+const Z = () => (day().zones || {})[S.zone] || {};
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -254,6 +262,8 @@ function header() {
     btn.innerHTML = `${esc(nm)}<small>${esc(b.split(" ").slice(0, 2).join(" "))}</small>`;
     btn.onclick = () => { S.day = i; render(); }; box.appendChild(btn);
   });
+  $("#zones").innerHTML = Object.entries(D.zones || {gp: {nom: "Guadeloupe"}}).map(([k, z]) =>
+    `<button class="${S.zone === k ? "on" : ""}" data-zone="${k}">${esc(z.nom)}</button>`).join("");
   const h = (Date.now() - new Date(D.generated_utc).getTime()) / 36e5;
   const el = $("#age"); el.className = h > 14 ? "old" : "muted";
   el.textContent = (navigator.onLine === false ? "hors ligne · " : "") + `rapport ${D.generated.split(" à ")[1] || ""}` +
@@ -263,7 +273,7 @@ function header() {
 
 /* ---------- Le point ---------- */
 function vPoint() {
-  const dd = day(), av = dd.avis || {}, cf = av.confiance || {};
+  const dd = day(), zz = Z(), av = zz.avis || {}, cf = av.confiance || {};
   let h = "";
   (D.warnings || []).slice(0, 1).forEach(w => h += `<p class="bad">${esc(w)}${D.warnings.length > 1 ? ` <span class="muted">(+${D.warnings.length - 1})</span>` : ""}</p>`);
   // Avis du jour : coup d'œil, puis lecture sur demande
@@ -271,7 +281,7 @@ function vPoint() {
     (cf.niveau ? `<span class="conf" style="background:${{"élevée": "#1f9d55", "moyenne": "#f0a500", "faible": "#b3261e"}[cf.niveau]}">Confiance ${cf.niveau}</span>` : "") + `</div>`;
   const KN = {"Alizé vers 1 000 m": "Alizé (1 000 m)", "Couche nuageuse d'alizé": "Nuages d'alizé", "Mer au large": "Mer au large", "Poussières sahariennes": "Poussières"};
   h += `<div class="kv">` + (av.chiffres || []).map(c => { const k = c.label.replace(/ \(.*\)$/, "");
-    const lab = KN[k] || (k.startsWith("Pluie") ? "Pluie (Basse-Terre)" : k.startsWith("Instabilité") ? "Instabilité" : k);
+    const lab = KN[k] || (k.startsWith("Pluie") ? "Pluie (relief)" : k.startsWith("Instabilité") ? "Instabilité" : k);
     return `<div><div class="k">${esc(lab)}</div><div class="v">${esc(c.valeur.replace(/ \(.*\)$/, ""))}</div></div>`; }).join("") + `</div>`;
   h += `<div id="avis-more" hidden><ul class="l">` + (av.chiffres || []).map(c => `<li><b>${esc(c.label)}</b> → ${esc(c.lecture)}${Q(c.aide)}</li>`).join("") + `</ul>`;
   if ((av.lecture || []).length) h += `<p class="small"><b>Ce qu'en lirait un prévisionniste</b>${Q("alize")}</p><ul class="l">` + av.lecture.map(t => `<li>${esc(t)}</li>`).join("") + `</ul>`;
@@ -279,19 +289,20 @@ function vPoint() {
   h += `<p class="xs muted">Prévision : ${esc(dd.couverture)}</p></div><button class="more" data-tog="avis-more">Lire l'analyse</button></div>`;
   // À faire : le top
   h += `<div class="card"><h2>À faire ${isToday() ? "aujourd'hui" : "ce jour-là"}</h2>`;
-  (dd.top || []).forEach(id => h += rowHtml(id, true));
-  if (!(dd.top || []).length) h += `<p class="small muted">Rien de vraiment praticable selon les modèles.</p>`;
+  (zz.top || []).forEach(id => h += rowHtml(id, true));
+  if (!(zz.top || []).length) h += `<p class="small muted">Rien de vraiment praticable selon les modèles.</p>`;
   h += `<button class="more" data-go="#activites">Toutes les activités →</button></div>`;
   // Pépites du jour
   const dayname = dd.title.split(" · ")[1];
-  const pep = (D.pepites || []).filter(p => p.jour === dayname), other = (D.pepites || []).filter(p => p.jour !== dayname);
+  const zp = (D.pepites || []).filter(p => (p.zone || "gp") === S.zone);
+  const pep = zp.filter(p => p.jour === dayname), other = zp.filter(p => p.jour !== dayname);
   h += `<div class="card"><h2>Pépites (lever, coucher)</h2>`;
   if (pep.length) pep.forEach((p, i) => h += pepHtml(p, "p" + i));
   else h += `<p class="small muted">Pas de lever ni de coucher dégagé prévu ce jour-là.${other.length ? ` Prochaine : <b>${esc(other[0].jour)}</b> · ${esc(other[0].texte)}` : ""}</p>`;
   h += `</div>`;
   // Sommets : une ligne par sommet, la barre horaire au toucher
   h += `<div class="card"><h2>Sommets heure par heure${Q("sommet")}</h2>`;
-  Object.entries(dd.sommets || {}).forEach(([nom, x], k) => {
+  Object.entries(dd.sommets || {}).forEach(([nom, x], k) => { if ((x.zone || "gp") !== S.zone) return;
     h += `<div class="row" data-tog="som${k}"><div class="t"><div class="n">${esc(nom)} <span class="muted xs">${x.alt || ""} m</span></div>` +
       `<div class="s">${esc(x.texte || "")}</div></div>${sunMark("🌅", x.lever)}${sunMark("🌇", x.coucher)}</div>` +
       `<div id="som${k}" hidden>${stripHtml(nom, x, k)}</div>`;
@@ -299,7 +310,7 @@ function vPoint() {
   h += `</div>`;
   // Everesting
   const ev = D.everesting;
-  if (ev && (ev.jours || []).length) {
+  if (S.zone === "gp" && ev && (ev.jours || []).length) {
     const st = ev.etoile, b = ev.meilleure;
     h += `<div class="card ever ${st ? "on" : ""}" data-tog="ev-more" style="cursor:pointer"><div class="t" style="flex:1"><b>${st ? "⭐" : "☆"} Everesting Soufrière</b><div class="small">` +
       (st ? `Départ ${esc(st.depart_txt)} · ${n(st.pluie, 1)} mm sur 24 h${st.source === "AROME" ? "" : " · tendance"}` :
@@ -307,9 +318,10 @@ function vPoint() {
     h += `<div id="ev-more" hidden class="card">${evHtml(ev)}</div>`;
   }
   // Webcams : repliées, chargées au toucher
-  if ((D.webcams || []).length) {
-    h += `<div class="card"><div class="ch" data-tog="cams" style="cursor:pointer"><h2>Webcams (${D.webcams.length})</h2><span class="muted">›</span></div><div id="cams" hidden>` +
-      D.webcams.map((w, i) => `<div class="row" data-cam="${i}"><div class="t"><div class="n">📷 ${esc(w.titre)}</div></div></div><div id="cam${i}"></div>`).join("") + `</div></div>`;
+  const cams = (D.webcams || []).map((w, i) => [w, i]).filter(([w]) => !w.lat || zoneOf(w.lat) === S.zone);
+  if (cams.length) {
+    h += `<div class="card"><div class="ch" data-tog="cams" style="cursor:pointer"><h2>Webcams (${cams.length})</h2><span class="muted">›</span></div><div id="cams" hidden>` +
+      cams.map(([w, i]) => `<div class="row" data-cam="${i}"><div class="t"><div class="n">📷 ${esc(w.titre)}</div></div></div><div id="cam${i}"></div>`).join("") + `</div></div>`;
   }
   return h;
 }
@@ -358,11 +370,13 @@ function rowHtml(id, single) {
     `<div class="s">${esc([when, why, sp.ile].filter(Boolean).join(" · "))}</div></div>${cmp ? right : ""}</div>`;
 }
 function vActivites() {
-  const iles = [...new Set(D.spots.map(s => s.ile).filter(Boolean))].sort((a, b) => (a === "Mer") - (b === "Mer") || a.localeCompare(b));
+  const inZone = D.spots.filter(s => (s.zone || "gp") === S.zone);
+  const iles = [...new Set(inZone.map(s => s.ile).filter(Boolean))].sort((a, b) => (a === "Mer") - (b === "Mer") || a.localeCompare(b));
   let h = `<div class="chips" id="f-cat">` + [["all", "Toutes"], ...Object.entries(CATS)].map(([k, v]) => `<button class="chip ${S.cat === k ? "on" : ""}" data-cat="${k}">${v}</button>`).join("") + `</div>`;
   h += `<div class="chips" id="f-ile">` + [["all", "Toutes les îles"], ...iles.map(x => [x, x])].map(([k, v]) => `<button class="chip ${S.ile === k ? "on" : ""}" data-ile="${esc(k)}">${esc(v)}</button>`).join("") +
     `<button class="chip ${S.cmp ? "on" : ""}" data-cmp="1">Comparer 3 jours</button></div>`;
-  const list = D.spots.filter(s => (S.cat === "all" || s.cat === S.cat) && (S.ile === "all" || s.ile === S.ile))
+  if (S.ile !== "all" && !iles.includes(S.ile)) S.ile = "all";
+  const list = inZone.filter(s => (S.cat === "all" || s.cat === S.cat) && (S.ile === "all" || s.ile === S.ile))
     .map(s => ({s, r: sc(s.id)})).sort((a, b) => (b.r.label === "Non" ? -1 : b.r.score ?? -1) - (a.r.label === "Non" ? -1 : a.r.score ?? -1));
   const good = list.filter(x => x.r.label !== "Non" && (x.r.score ?? 0) >= 35), bad = list.filter(x => !good.includes(x));
   h += `<div class="card">${good.map(x => rowHtml(x.s.id)).join("") || `<p class="small muted">Rien de recommandé avec ces filtres.</p>`}</div>`;
@@ -445,7 +459,7 @@ function cellText(i) {
   return t;
 }
 function initMap() {
-  map = L.map("map", {zoomControl: false}).setView([16.15, -61.42], 10);
+  map = L.map("map", {zoomControl: false}).setView(ZC[S.zone].slice(0, 2), ZC[S.zone][2]);
   L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {maxZoom: 16, attribution: "© OpenStreetMap, SRTM · OpenTopoMap (CC-BY-SA)"}).addTo(map);
   G.cells.forEach((c, i) => {
     const half = (c.size || G.step || 0.025) / 2;
@@ -499,10 +513,11 @@ function render() {
   } else v.innerHTML = vPoint();
 }
 document.addEventListener("click", e => {
-  const el = e.target.closest("[data-tog],[data-id],[data-go],[data-cat],[data-ile],[data-cmp],[data-why],[data-cam],[data-fday]");
+  const el = e.target.closest("[data-tog],[data-id],[data-go],[data-cat],[data-ile],[data-cmp],[data-why],[data-cam],[data-fday],[data-zone]");
   if (!el || e.target.closest("a.q")) { if (e.target.closest("a.q")) closeSheet(); return; }
   if (el.dataset.tog) { const x = document.getElementById(el.dataset.tog); if (x) { x.hidden = !x.hidden;
       if (el.classList.contains("more") && el.dataset.tog === "avis-more") el.textContent = x.hidden ? "Lire l'analyse" : "Masquer l'analyse"; } return; }
+  if (el.dataset.zone) { S.zone = el.dataset.zone; save(); if (map) map.setView(ZC[S.zone].slice(0, 2), ZC[S.zone][2]); render(); return; }
   if (el.dataset.id) return fiche(el.dataset.id);
   if (el.dataset.go) { location.hash = el.dataset.go; return; }
   if (el.dataset.cat) { S.cat = el.dataset.cat; save(); if (tab() === "carte") drawMap(); else render(); return; }
